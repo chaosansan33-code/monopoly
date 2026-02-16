@@ -1,0 +1,1742 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>天下書院｜線上共識大富翁（質感版）</title>
+
+  <!-- Excel 匯出（xlsx）。若離線載不到，程式會自動 fallback CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#070b14;
+      --panel: rgba(17, 26, 46, .72);
+      --panel2: rgba(13, 20, 36, .75);
+      --text:#eaf1ff;
+      --muted:#a9b6d3;
+      --line: rgba(255,255,255,.10);
+      --shadow: 0 18px 44px rgba(0,0,0,.55);
+      --r:20px;
+
+      --pink:#ff6b9b;
+      --blue:#60a5fa;
+      --green:#22c55e;
+
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+      --ink:#0b1020;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(900px 700px at 20% 0%, rgba(255,107,155,.16), transparent 60%),
+        radial-gradient(900px 700px at 85% 25%, rgba(96,165,250,.14), transparent 60%),
+        radial-gradient(1100px 800px at 50% 110%, rgba(34,197,94,.12), transparent 60%),
+        linear-gradient(180deg, #070b14 0%, #050811 100%);
+      min-height:100vh;
+    }
+
+    .app{
+      display:grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap:14px;
+      height:100vh;
+      padding:14px;
+    }
+
+    .panel{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+      backdrop-filter: blur(10px);
+    }
+
+    header{
+      flex:0 0 auto;
+      padding:12px 14px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+    }
+    header h1{ margin:0; font-size:15px; letter-spacing:.3px; }
+    header .sub{ color:var(--muted); font-size:12px; line-height:1.35; }
+
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill{
+      font-size:12px; color:var(--muted);
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      padding:6px 10px;
+      border-radius:999px;
+      white-space:nowrap;
+    }
+
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:900;
+      letter-spacing:.2px;
+      transition:.12s transform, .12s background, .12s box-shadow;
+      user-select:none;
+    }
+    .btn:hover{
+      background: rgba(255,255,255,.10);
+      box-shadow: 0 10px 22px rgba(0,0,0,.25);
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.ok{ border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.16); }
+    .btn.warn{ border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.16); }
+    .btn.bad{ border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.16); }
+    .btn.pink{ border-color: rgba(255,107,155,.35); background: rgba(255,107,155,.16); }
+
+    .content{
+      padding:12px;
+      overflow:auto;
+      min-height:0;
+      flex:1 1 auto;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .card{
+      background: rgba(15, 24, 45, .68);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:12px;
+      box-shadow: 0 10px 28px rgba(0,0,0,.25);
+    }
+    .card h2{ margin:0 0 8px 0; font-size:14px; letter-spacing:.2px; }
+    .muted{ color:var(--muted); font-size:12px; line-height:1.5; }
+    .divider{ height:1px; background:var(--line); margin:10px 0; }
+
+    /* Map */
+    .mapWrap{
+      position:relative;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      overflow:hidden;
+      background: rgba(0,0,0,.22);
+    }
+    .mapWrap img{
+      width:100%;
+      height:auto;
+      display:block;
+      object-fit:contain;
+      background: rgba(0,0,0,.20);
+    }
+    .token{
+      position:absolute;
+      width: 16px; height: 16px;
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,.28);
+      box-shadow: 0 10px 22px rgba(0,0,0,.42);
+      transform: translate(-50%,-50%);
+      pointer-events:none;
+    }
+    .cellDot{
+      position:absolute;
+      width: 10px; height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.10);
+      transform: translate(-50%,-50%);
+      pointer-events:none;
+    }
+
+    /* RIGHT (不要再切斷內容) */
+    .rightContent{
+      flex:1 1 auto;
+      min-height:0;
+      overflow:auto;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    details{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      background: rgba(15, 24, 45, .68);
+      box-shadow: 0 10px 28px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding:12px;
+      font-weight:950;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    details .inner{
+      padding:12px;
+      border-top:1px solid var(--line);
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+
+    input, textarea, select{
+      width:100%;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      border-radius:14px;
+      padding:10px 12px;
+      font-family:var(--sans);
+      outline:none;
+    }
+    textarea{ min-height: 92px; resize:vertical; }
+    .label{ font-size:12px; color:var(--muted); margin: 8px 0 6px; display:block; }
+
+    .teamItem{
+      padding:10px;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      background: rgba(0,0,0,.14);
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:center;
+      margin-bottom:8px;
+    }
+    .teamName{ font-weight:950; display:flex; gap:10px; align-items:center; }
+    .mini{ font-size:12px; color:var(--muted); margin-top:3px; line-height:1.35; }
+    .tag{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      white-space:nowrap;
+    }
+
+    /* records (每筆可展開全文) */
+    .recordDetails{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      background: rgba(0,0,0,.16);
+      overflow:hidden;
+      margin-bottom:8px;
+    }
+    .recordDetails summary{
+      padding:10px 12px;
+      font-weight:900;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .recordDetails .body{
+      padding:10px 12px;
+      border-top:1px solid var(--line);
+      font-size:12.8px;
+      line-height:1.55;
+      color:var(--text);
+      white-space:pre-wrap;
+    }
+
+    /* cards list (每張可展開全文) */
+    .cardDetails{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      background: rgba(0,0,0,.14);
+      overflow:hidden;
+      margin-bottom:8px;
+    }
+    .cardDetails summary{
+      padding:10px 12px;
+      font-weight:900;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .cardDetails .body{
+      padding:10px 12px;
+      border-top:1px solid var(--line);
+      font-size:12.8px;
+      line-height:1.55;
+      white-space:pre-wrap;
+    }
+
+    /* modal (強制決策：沒有 close / 不能點背景) */
+    .modalBg{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.62);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      z-index:999;
+    }
+    .modal{
+      width:min(980px, 100%);
+      max-height: 92vh;
+      overflow:auto;
+      background: rgba(15, 24, 45, .96);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:22px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.65);
+      padding:14px;
+      backdrop-filter: blur(10px);
+    }
+    .modalTop{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      padding:6px 6px 10px;
+    }
+    .modalTop h3{ margin:0; font-size:16px; }
+    .modalHero{
+      padding:16px;
+      border-radius:18px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      margin: 10px 0 12px;
+      text-align:center;
+    }
+    .modalHero .d{
+      font-size:62px;
+      font-weight:990;
+      letter-spacing:1px;
+      margin:0;
+    }
+    .modalHero .to{
+      font-size:18px;
+      margin-top:8px;
+      font-weight:950;
+    }
+    .modalHint{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.55;
+      padding: 0 6px 8px;
+    }
+    .modalFooter{
+      display:flex;
+      gap:10px;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      padding:10px 6px 0;
+    }
+
+    @media (max-width: 980px){
+      .app{ grid-template-columns:1fr; height:auto; }
+      .panel{ min-height: 540px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- LEFT -->
+    <section class="panel">
+      <header>
+        <div>
+          <h1>天下書院｜線上共識大富翁（質感版）</h1>
+          <div class="sub" id="statusLine">—</div>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnReset">重置本局</button>
+          <button class="btn" id="btnExportXlsx">匯出 Excel</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="card">
+          <h2>回合控制</h2>
+          <div class="row" style="justify-content:space-between;">
+            <div class="row">
+              <span class="tag">目前隊伍</span>
+              <select id="selActiveTeam" style="min-width:260px;"></select>
+              <span class="tag" id="turnInfo">—</span>
+            </div>
+            <div class="row">
+              <button class="btn ok" id="btnRoll">🎲 擲骰子</button>
+              <button class="btn bad" id="btnFinish">🏁 結束並結算</button>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:8px;">
+            ✅ 強制決策：沒有「關閉 / 取消 / X」，也不能點背景關閉。<br>
+            ✅ 必須完成事件（經過/付租/抽卡套用/監獄決策/送出企劃）才會換到下一隊。
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>地圖（map.png）</h2>
+          <div class="muted" style="margin-bottom:8px;">
+            把你的地圖圖片放在同一資料夾，命名為 <b>map.png</b>（或改下面 img 的 src）。
+          </div>
+          <div class="mapWrap" id="mapWrap">
+            <img id="mapImg" src="map.png" alt="Board Map" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="panel">
+      <header>
+        <div>
+          <h1>主持面板</h1>
+          <div class="sub">隊伍/卡牌/記錄都會儲存在此裝置（localStorage）</div>
+        </div>
+      </header>
+
+      <div class="rightContent">
+
+        <!-- Teams -->
+        <details open>
+          <summary>
+            <span>隊伍列表（可收合）</span>
+            <span class="pill" id="teamsCountPill">—</span>
+          </summary>
+          <div class="inner">
+            <div class="grid2">
+              <div>
+                <span class="label">隊伍名稱</span>
+                <input id="teamName" placeholder="例：第 1 組 / A 組" />
+              </div>
+              <div>
+                <span class="label">成員（可不填）</span>
+                <input id="teamMembers" placeholder="例：姍姍、品然" />
+              </div>
+            </div>
+            <div class="grid2" style="margin-top:6px;">
+              <div>
+                <span class="label">起始現金</span>
+                <input id="teamMoney" type="number" />
+              </div>
+              <div>
+                <span class="label">新增</span>
+                <button class="btn ok" id="btnAddTeam" style="width:100%;">＋加入隊伍</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div id="teamsList"></div>
+          </div>
+        </details>
+
+        <!-- Cards -->
+        <details open>
+          <summary>
+            <span>機會 / 命運卡牌庫（可收合）</span>
+            <span class="pill" id="cardsCountPill">—</span>
+          </summary>
+          <div class="inner">
+            <div class="muted">
+              ✅ 機會/命運不綁正負；金額可正可負。<br>
+              ✅ 跨裝置：匯出 JSON → 在另一台匯入 JSON。
+            </div>
+            <div class="divider"></div>
+
+            <div class="row">
+              <button class="btn" id="btnExportCards">匯出卡牌庫 JSON</button>
+              <button class="btn" id="btnImportCards">匯入卡牌庫 JSON</button>
+              <input type="file" id="cardsFile" accept="application/json" style="display:none;">
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="grid2">
+              <div>
+                <span class="label">類型</span>
+                <select id="newCardType">
+                  <option value="chance">機會</option>
+                  <option value="fate">命運</option>
+                </select>
+              </div>
+              <div>
+                <span class="label">金額（可正可負）</span>
+                <input id="newCardMoney" type="number" placeholder="例：200 或 -300" />
+              </div>
+            </div>
+            <span class="label">卡牌內容</span>
+            <input id="newCardText" placeholder="例：臨時得到國外單位資源｜省下一筆成本" />
+            <button class="btn ok" id="btnAddCard" style="width:100%;">新增卡牌</button>
+
+            <div class="divider"></div>
+            <div id="cardsList"></div>
+          </div>
+        </details>
+
+        <!-- Records -->
+        <details open>
+          <summary>
+            <span>回答紀錄牆（只記回答，可收合）</span>
+            <span class="pill" id="recordsCountPill">—</span>
+          </summary>
+          <div class="inner">
+            <div class="muted">只記：企劃卡回答 / 最後結算摘要（不記操作log、不記抽卡結果）。</div>
+            <div class="divider"></div>
+            <div id="recordsList"></div>
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+  </div>
+
+  <!-- MODAL (no close / no background click) -->
+  <div class="modalBg" id="modalBg" aria-hidden="true">
+    <div class="modal" id="modal"></div>
+  </div>
+
+<script>
+(() => {
+  /***********************
+   * Board config
+   ***********************/
+  const CELLS = [
+    {id:1,  type:"start",  theme:"—",       name:"起點（經過扣 $200）"},
+    {id:2,  type:"core",   theme:"台灣文化", name:"節慶"},
+    {id:3,  type:"core",   theme:"國際議題", name:"政經"},
+    {id:4,  type:"chance", theme:"—",       name:"機會"},
+    {id:5,  type:"core",   theme:"全球視野", name:"外國節慶"},
+    {id:6,  type:"core",   theme:"台灣文化", name:"自由①"},
+    {id:7,  type:"fate",   theme:"—",       name:"命運"},
+    {id:8,  type:"core",   theme:"國際議題", name:"永續"},
+    {id:9,  type:"jail",   theme:"—",       name:"監獄"},
+    {id:10, type:"core",   theme:"全球視野", name:"自由①"},
+    {id:11, type:"core",   theme:"台灣文化", name:"美食"},
+    {id:12, type:"chance", theme:"—",       name:"機會"},
+    {id:13, type:"core",   theme:"國際議題", name:"自由①"},
+    {id:14, type:"core",   theme:"全球視野", name:"國外單位交流"},
+    {id:15, type:"core",   theme:"台灣文化", name:"自由②"},
+    {id:16, type:"core",   theme:"國際議題", name:"自由②"},
+    {id:17, type:"core",   theme:"全球視野", name:"自由②"},
+    {id:18, type:"core",   theme:"台灣文化", name:"自由③"},
+    {id:19, type:"fate",   theme:"—",       name:"命運"},
+    {id:20, type:"core",   theme:"國際議題", name:"自由③"},
+    {id:21, type:"jail",   theme:"—",       name:"監獄"},
+    {id:22, type:"core",   theme:"全球視野", name:"自由③"},
+  ];
+
+  // tokens on map (you can tweak x/y later to perfectly match your image)
+  const HOTSPOTS = [
+    {id:1,  x: 8,  y: 12},
+    {id:2,  x: 18, y: 12},
+    {id:3,  x: 28, y: 12},
+    {id:4,  x: 38, y: 12},
+    {id:5,  x: 48, y: 12},
+    {id:6,  x: 58, y: 12},
+    {id:7,  x: 68, y: 12},
+    {id:8,  x: 78, y: 12},
+    {id:9,  x: 88, y: 25},
+    {id:10, x: 88, y: 36},
+    {id:11, x: 88, y: 47},
+    {id:12, x: 88, y: 58},
+    {id:13, x: 88, y: 69},
+    {id:14, x: 75, y: 86},
+    {id:15, x: 62, y: 86},
+    {id:16, x: 49, y: 86},
+    {id:17, x: 36, y: 86},
+    {id:18, x: 23, y: 86},
+    {id:19, x: 10, y: 86},
+    {id:20, x: 8,  y: 72},
+    {id:21, x: 8,  y: 54},
+    {id:22, x: 8,  y: 32},
+  ];
+
+  /***********************
+   * Your original cards (16 chance / 15 fate)
+   ***********************/
+  const ORIGINAL_CARDS = {
+    chance: [
+      {money:+300, text:"你被選為書院代表：提案獲選代表書院簡報，全場注目！"},
+      {money:+200, text:"社群貼文爆紅：貼文被瘋傳，成功宣傳活動。"},
+      {money:+200, text:"組員主動分擔工作：有人分攤任務，輕鬆許多。"},
+      {money:+300, text:"成功談妥贊助：拿下外部單位支持！"},
+      {money:+100, text:"你拿到外交部出國補助：「本月之星」登上公告欄。"},
+      {money:+300, text:"團隊對外參賽獲獎：萬眾矚目！天下之光！"},
+      {money:+200, text:"被邀請參與外部培訓：你獲得進修機會。"},
+      {money:+100, text:"結交外國朋友：開拓視野/打破刻板印象。"},
+      {money:+300, text:"活動獲媒體報導：曝光度與信心雙升。"},
+      {money:+200, text:"你的提案被採納：創意成為書院亮點。"},
+      {money:+100, text:"認識學長姐的內線：獲取寶貴資訊。"},
+      {money:+200, text:"早鳥報名爆滿：報名人潮超乎預期！"},
+      {money:+300, text:"與導師化解誤會：重獲信任與支持。"},
+      {money:+100, text:"別人記住你的努力：感謝信讓你暖心。"},
+      {money:+300, text:"新成員帶來靈感：突破團隊卡關！"},
+      {money:+200, text:"獲選優良院生：副校長親頒獎狀+獎金！"},
+    ],
+    fate: [
+      {money:-300, text:"被誤會搞內鬥：流言四起，壓力倍增。"},
+      {money:-200, text:"活動帳務出錯：報帳金額遭退回。"},
+      {money:-300, text:"不符教育和學習意涵：計畫被退回修改。"},
+      {money:-100, text:"組員躺分：獨自一人硬撐。"},
+      {money:-300, text:"負面網路輿論：破壞天下聲譽。"},
+      {money:-200, text:"活動主持人沒控場：現場一片混亂。"},
+      {money:-100, text:"組員發起投訴：導師找你談話。"},
+      {money:-300, text:"颱風來襲/設備壞掉/場地出包：活動緊急中斷！"},
+      {money:-300, text:"計畫與原提案差異太大：要提計畫變更重審。"},
+      {money:-200, text:"沒有場復：勞動服務+害天下被停止借用。"},
+      {money:-300, text:"遭遇不明謠言：無法澄清的焦慮。"},
+      {money:-200, text:"組員失聯：團隊進度卡關。"},
+      {money:-300, text:"新規定限制形式：活動受政策牽制。"},
+      {money:-200, text:"經費被砍：沒錢喝西北風。"},
+      {money:-300, text:"資料遺失：檔案全毀，進度重來。"},
+    ]
+  };
+
+  /***********************
+   * State
+   ***********************/
+  const LS_KEY = "nthu_gp_consensus_monopoly_vB_luxe_20260211";
+
+  function rid(prefix){ return prefix + Math.random().toString(16).slice(2,10); }
+  function nowStr(){
+    const d=new Date();
+    const p=n=>String(n).padStart(2,"0");
+    return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;");
+  }
+
+  const defaultState = () => ({
+    version: 120,
+    rules: {
+      startMoney: 2000,
+      passStartCost: 200,
+      bailCost: 100,
+      rentPerBuilding: 200,
+      landValue: 300,        // settlement
+      buildingBonus: 50,     // settlement
+      maxBuildings: 2
+    },
+    activeTeamIndex: 0,
+    teams: [],
+    ownership: {
+      // cellId: { ownerTeamId, coOwnerTeamId, buildings, planIds: [] }
+    },
+    plans: [],
+    records: [], // only answers: plan + finish
+    jail: {}, // teamId: { skip: 0/1 }
+    cards: {
+      chance: ORIGINAL_CARDS.chance.map(c => ({id: rid("C"), ...c})),
+      fate: ORIGINAL_CARDS.fate.map(c => ({id: rid("F"), ...c})),
+    },
+    finished: false
+  });
+
+  let STATE = loadState();
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return defaultState();
+      const s = JSON.parse(raw);
+      if(!s || s.version !== 120) return defaultState();
+      if(!s.cards?.chance || !s.cards?.fate){
+        s.cards = {
+          chance: ORIGINAL_CARDS.chance.map(c => ({id: rid("C"), ...c})),
+          fate: ORIGINAL_CARDS.fate.map(c => ({id: rid("F"), ...c})),
+        };
+      }
+      if(!Array.isArray(s.records)) s.records = [];
+      if(!Array.isArray(s.plans)) s.plans = [];
+      if(!s.ownership) s.ownership = {};
+      if(!s.jail) s.jail = {};
+      if(typeof s.finished !== "boolean") s.finished = false;
+      return s;
+    }catch(e){
+      return defaultState();
+    }
+  }
+  function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
+
+  function cellById(id){ return CELLS.find(c=>c.id===id); }
+  function cellLabel(id){
+    const c = cellById(id);
+    if(!c) return `格子${id}`;
+    return c.theme !== "—" ? `${c.theme}－${c.name}` : c.name;
+  }
+  function getActiveTeam(){ return STATE.teams[STATE.activeTeamIndex] || null; }
+  function clampMoney(team){ if(team.money < 0) team.money = 0; }
+
+  function ownedCount(teamId){
+    let n=0;
+    for(const k of Object.keys(STATE.ownership)){
+      const o = STATE.ownership[k];
+      if(o.ownerTeamId===teamId || o.coOwnerTeamId===teamId) n++;
+    }
+    return n;
+  }
+
+  /***********************
+   * DOM
+   ***********************/
+  const elStatusLine = document.getElementById("statusLine");
+  const elTeamsCountPill = document.getElementById("teamsCountPill");
+  const elCardsCountPill = document.getElementById("cardsCountPill");
+  const elRecordsCountPill = document.getElementById("recordsCountPill");
+
+  const elSelActiveTeam = document.getElementById("selActiveTeam");
+  const elTurnInfo = document.getElementById("turnInfo");
+
+  const elTeamsList = document.getElementById("teamsList");
+  const elCardsList = document.getElementById("cardsList");
+  const elRecordsList = document.getElementById("recordsList");
+
+  const elMapWrap = document.getElementById("mapWrap");
+
+  const modalBg = document.getElementById("modalBg");
+  const modal = document.getElementById("modal");
+
+  // 強制決策：不允許點背景關閉
+  modalBg.addEventListener("click", () => { /* do nothing */ });
+
+  function openModal(html){
+    modal.innerHTML = html;
+    modalBg.style.display = "flex";
+    modalBg.setAttribute("aria-hidden","false");
+  }
+  function closeModal(){
+    modalBg.style.display = "none";
+    modalBg.setAttribute("aria-hidden","true");
+    modal.innerHTML = "";
+  }
+
+  /***********************
+   * Records (only answers)
+   ***********************/
+  function pushRecord(type, title, html, meta={}){
+    STATE.records.unshift({id: rid("R"), t: nowStr(), type, title, html, meta});
+    saveState();
+    render();
+  }
+
+  /***********************
+   * Map tokens
+   ***********************/
+  function buildMap(){
+    [...elMapWrap.querySelectorAll(".token")].forEach(n=>n.remove());
+    [...elMapWrap.querySelectorAll(".cellDot")].forEach(n=>n.remove());
+
+    for(const h of HOTSPOTS){
+      const dot = document.createElement("div");
+      dot.className = "cellDot";
+      dot.style.left = `${h.x}%`;
+      dot.style.top  = `${h.y}%`;
+      elMapWrap.appendChild(dot);
+    }
+
+    for(const t of STATE.teams){
+      const h = HOTSPOTS.find(x=>x.id===t.position) || HOTSPOTS[0];
+      const tok = document.createElement("div");
+      tok.className = "token";
+      tok.style.left = `${h.x}%`;
+      tok.style.top  = `${h.y}%`;
+      tok.style.background = t.color;
+      tok.title = `${t.name} @ ${cellLabel(t.position)}`;
+      elMapWrap.appendChild(tok);
+    }
+  }
+
+  /***********************
+   * Render helpers
+   ***********************/
+  function themeTag(theme){
+    if(theme==="台灣文化") return `<span class="tag" style="border-color:rgba(255,107,155,.35);background:rgba(255,107,155,.14)">台灣文化</span>`;
+    if(theme==="國際議題") return `<span class="tag" style="border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.14)">國際議題</span>`;
+    if(theme==="全球視野") return `<span class="tag" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.14)">全球視野</span>`;
+    return `<span class="tag">特殊</span>`;
+  }
+
+  function stripHtmlToText(html){
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return (tmp.textContent || tmp.innerText || "").trim();
+  }
+
+  /***********************
+   * Render
+   ***********************/
+  function render(){
+    elStatusLine.textContent =
+      `隊伍 ${STATE.teams.length} 組｜企劃卡 ${STATE.plans.length}｜回答記錄 ${STATE.records.length}｜機會 ${STATE.cards.chance.length}｜命運 ${STATE.cards.fate.length}`;
+
+    elTeamsCountPill.textContent = `隊伍 ${STATE.teams.length}`;
+    elCardsCountPill.textContent = `機會 ${STATE.cards.chance.length}｜命運 ${STATE.cards.fate.length}`;
+    elRecordsCountPill.textContent = `記錄 ${STATE.records.length}`;
+
+    // active select
+    elSelActiveTeam.innerHTML = "";
+    STATE.teams.forEach((t, idx) => {
+      const opt = document.createElement("option");
+      opt.value = String(idx);
+      opt.textContent = `${t.name}（$${t.money}｜${cellLabel(t.position)}）`;
+      elSelActiveTeam.appendChild(opt);
+    });
+
+    if(STATE.teams.length > 0){
+      elSelActiveTeam.value = String(STATE.activeTeamIndex);
+      const t = getActiveTeam();
+      const jail = STATE.jail[t.id];
+      elTurnInfo.textContent = jail?.skip ? `⚠️ ${t.name}（監獄：跳過 1 回合）` : `輪到：${t.name}`;
+    }else{
+      elTurnInfo.textContent = "請先新增隊伍";
+    }
+
+    // Teams
+    elTeamsList.innerHTML = "";
+    STATE.teams.forEach((t, idx) => {
+      const jail = STATE.jail[t.id];
+      const active = idx===STATE.activeTeamIndex;
+
+      const div = document.createElement("div");
+      div.className = "teamItem";
+      div.innerHTML = `
+        <div>
+          <div class="teamName">
+            <span style="width:10px;height:10px;border-radius:999px;background:${t.color};display:inline-block;"></span>
+            ${escapeHtml(t.name)}
+            ${active ? `<span class="tag" style="border-color:rgba(255,107,155,.35);background:rgba(255,107,155,.14)">目前</span>` : ""}
+            ${jail?.skip ? `<span class="tag" style="border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.12)">監獄跳過1</span>` : ""}
+          </div>
+          <div class="mini">
+            成員：${escapeHtml(t.members||"—")}｜現金：$${t.money}<br>
+            位置：${escapeHtml(cellLabel(t.position))}｜地產：${ownedCount(t.id)} 格
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end;">
+          <button class="btn" data-act="setActive" data-idx="${idx}">切換</button>
+          <button class="btn bad" data-act="removeTeam" data-id="${t.id}">刪除</button>
+        </div>
+      `;
+      elTeamsList.appendChild(div);
+    });
+
+    // Cards (each expandable)
+    elCardsList.innerHTML = "";
+
+    const addCardGroupTitle = (label) => {
+      const d = document.createElement("div");
+      d.className = "tag";
+      d.textContent = label;
+      d.style.marginBottom="8px";
+      elCardsList.appendChild(d);
+    };
+
+    const addCardDetails = (type, c) => {
+      const dd = document.createElement("details");
+      dd.className = "cardDetails";
+      dd.innerHTML = `
+        <summary>
+          <span>${type==="chance"?"機會":"命運"}｜${c.money>=0?"+":""}${c.money}</span>
+          <span class="tag">點開看全文</span>
+        </summary>
+        <div class="body">${escapeHtml(c.text)}</div>
+        <div class="body" style="padding-top:0;">
+          <button class="btn bad" data-act="delCard" data-type="${type}" data-id="${c.id}">刪除</button>
+        </div>
+      `;
+      elCardsList.appendChild(dd);
+    };
+
+    addCardGroupTitle("機會卡（你原本 16 張）");
+    STATE.cards.chance.forEach(c => addCardDetails("chance", c));
+    addCardGroupTitle("命運卡（你原本 15 張）");
+    STATE.cards.fate.forEach(c => addCardDetails("fate", c));
+
+    // Records (each expandable)
+    elRecordsList.innerHTML = "";
+    if(STATE.records.length===0){
+      const m = document.createElement("div");
+      m.className = "muted";
+      m.textContent = "目前還沒有回答紀錄。";
+      elRecordsList.appendChild(m);
+    }else{
+      STATE.records.forEach(r => {
+        const dd = document.createElement("details");
+        dd.className = "recordDetails";
+        dd.innerHTML = `
+          <summary>
+            <span>${r.t}｜${escapeHtml(r.title)}</span>
+            <span class="tag">${escapeHtml(r.type)}</span>
+          </summary>
+          <div class="body">${stripHtmlToText(r.html)}</div>
+        `;
+        elRecordsList.appendChild(dd);
+      });
+    }
+
+    buildMap();
+  }
+
+  /***********************
+   * Teams
+   ***********************/
+  function pickColor(i){
+    const palette = ["#ff6b9b","#60a5fa","#22c55e","#f59e0b","#a78bfa","#fb7185","#34d399","#f472b6","#93c5fd"];
+    return palette[i % palette.length];
+  }
+
+  function addTeam(){
+    const name = document.getElementById("teamName").value.trim() || `第 ${STATE.teams.length+1} 組`;
+    const members = document.getElementById("teamMembers").value.trim();
+    const money = parseInt(document.getElementById("teamMoney").value, 10);
+    const startMoney = Number.isFinite(money) ? money : STATE.rules.startMoney;
+
+    const team = {
+      id: rid("T"),
+      name,
+      members,
+      money: startMoney,
+      position: 1,
+      color: pickColor(STATE.teams.length)
+    };
+    STATE.teams.push(team);
+    saveState();
+    document.getElementById("teamName").value = "";
+    document.getElementById("teamMembers").value = "";
+    render();
+  }
+
+  function removeTeam(teamId){
+    for(const k of Object.keys(STATE.ownership)){
+      const o = STATE.ownership[k];
+      if(o.ownerTeamId===teamId || o.coOwnerTeamId===teamId){
+        delete STATE.ownership[k];
+      }
+    }
+    delete STATE.jail[teamId];
+
+    STATE.teams = STATE.teams.filter(t => t.id !== teamId);
+    if(STATE.activeTeamIndex >= STATE.teams.length) STATE.activeTeamIndex = 0;
+
+    saveState();
+    render();
+  }
+
+  /***********************
+   * Cards library import/export
+   ***********************/
+  function addCard(){
+    const type = document.getElementById("newCardType").value;
+    const text = document.getElementById("newCardText").value.trim();
+    const money = Number(document.getElementById("newCardMoney").value);
+
+    if(!text || !Number.isFinite(money)){
+      openModal(`
+        <div class="modalTop"><h3>新增卡牌失敗</h3><span class="pill">INFO</span></div>
+        <div class="modalHint">請填寫卡牌內容與金額（可正可負）。</div>
+        <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
+      `);
+      document.getElementById("mOk").onclick = () => closeModal();
+      return;
+    }
+    const id = rid(type==="chance"?"C":"F");
+    STATE.cards[type].push({id, text, money});
+    document.getElementById("newCardText").value = "";
+    document.getElementById("newCardMoney").value = "";
+    saveState();
+    render();
+  }
+
+  function deleteCard(type, id){
+    STATE.cards[type] = STATE.cards[type].filter(c => c.id !== id);
+    saveState();
+    render();
+  }
+
+  function exportCardsJson(){
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      chance: STATE.cards.chance.map(c => ({money: c.money, text: c.text})),
+      fate: STATE.cards.fate.map(c => ({money: c.money, text: c.text}))
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `卡牌庫_${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importCardsJsonFromFile(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        const chance = Array.isArray(data.chance) ? data.chance : [];
+        const fate = Array.isArray(data.fate) ? data.fate : [];
+
+        STATE.cards.chance = chance
+          .filter(x => typeof x.text === "string" && Number.isFinite(Number(x.money)))
+          .map(x => ({id: rid("C"), text: String(x.text), money: Number(x.money)}));
+
+        STATE.cards.fate = fate
+          .filter(x => typeof x.text === "string" && Number.isFinite(Number(x.money)))
+          .map(x => ({id: rid("F"), text: String(x.text), money: Number(x.money)}));
+
+        saveState();
+        render();
+
+        openModal(`
+          <div class="modalTop"><h3>匯入成功</h3><span class="pill">INFO</span></div>
+          <div class="modalHint">已匯入：機會 ${STATE.cards.chance.length} 張｜命運 ${STATE.cards.fate.length} 張</div>
+          <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
+        `);
+        document.getElementById("mOk").onclick = () => closeModal();
+      }catch(e){
+        openModal(`
+          <div class="modalTop"><h3>匯入失敗</h3><span class="pill">ERROR</span></div>
+          <div class="modalHint">檔案不是合法的 JSON 或格式不符合。</div>
+          <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
+        `);
+        document.getElementById("mOk").onclick = () => closeModal();
+      }
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  /***********************
+   * Game flow
+   ***********************/
+  function rollDice(){ return Math.floor(Math.random()*6)+1; }
+
+  function moveTeam(team, steps){
+    let pos = team.position;
+    for(let i=0;i<steps;i++){
+      pos++;
+      if(pos>22) pos = 1;
+      if(pos===1){
+        team.money -= STATE.rules.passStartCost;
+        clampMoney(team);
+      }
+    }
+    team.position = pos;
+  }
+
+  function nextTeam(){
+    if(STATE.teams.length===0) return;
+    STATE.activeTeamIndex = (STATE.activeTeamIndex + 1) % STATE.teams.length;
+    saveState();
+    render();
+  }
+
+  function autoSkipIfJailed(){
+    const t = getActiveTeam();
+    if(!t) return false;
+    const j = STATE.jail[t.id];
+    if(j?.skip){
+      STATE.jail[t.id].skip = 0;
+      saveState();
+      render();
+      nextTeam();
+      return true;
+    }
+    return false;
+  }
+
+  function drawCard(type){
+    const arr = type==="chance" ? STATE.cards.chance : STATE.cards.fate;
+    if(!arr.length) return null;
+    return arr[Math.floor(Math.random()*arr.length)];
+  }
+
+  function getPlansForCell(cellId){
+    const own = STATE.ownership[String(cellId)];
+    const ids = own?.planIds || [];
+    return ids.map(pid => STATE.plans.find(p => p.id===pid)).filter(Boolean);
+  }
+
+  function plansHtml(plans){
+    if(!plans.length) return `<div class="muted">（此格尚無既有企劃卡）</div>`;
+    return plans.map((p,i) => `
+      <div style="padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.16);margin-top:8px;">
+        <div style="font-weight:950;">既有企劃 #${i+1}｜${escapeHtml(p.name)}</div>
+        ${p.slogan ? `<div><b>亮點：</b>${escapeHtml(p.slogan)}</div>` : ""}
+        ${p.WHO ? `<div><b>WHO：</b>${escapeHtml(p.WHO)}</div>` : ""}
+        ${p.WHAT ? `<div><b>WHAT：</b>${escapeHtml(p.WHAT)}</div>` : ""}
+        ${p.HOW ? `<div><b>HOW：</b>${escapeHtml(p.HOW)}</div>` : ""}
+        ${p.WHY ? `<div><b>WHY：</b>${escapeHtml(p.WHY)}</div>` : ""}
+        ${p.said ? `<div><b>他們說了什麼：</b>${escapeHtml(p.said)}</div>` : ""}
+        <div class="divider"></div>
+        <div class="muted">投票：YES ${p.vote?.yes ?? "?"}/${p.vote?.total ?? "?"} → ${p.result==="PASS"?"通過":"未通過"}</div>
+      </div>
+    `).join("");
+  }
+
+  function payRent(payerTeam, ownerTeam, buildings){
+    const rent = STATE.rules.rentPerBuilding * (buildings || 1);
+    payerTeam.money -= rent; clampMoney(payerTeam);
+    ownerTeam.money += rent;
+    saveState();
+    render();
+    return rent;
+  }
+
+  /***********************
+   * Modals
+   ***********************/
+  function showDiceModal(team, dice, destLabel){
+    return new Promise(resolve => {
+      openModal(`
+        <div class="modalTop"><h3>擲骰結果</h3><span class="pill">DICE</span></div>
+        <div class="modalHero">
+          <div class="d">🎲 ${dice}</div>
+          <div class="to">${escapeHtml(team.name)} → ${escapeHtml(destLabel)}</div>
+          <div class="modalHint">（此提示不寫入記錄牆）</div>
+        </div>
+        <div class="modalFooter"><button class="btn ok" id="mGo">繼續</button></div>
+      `);
+      document.getElementById("mGo").onclick = () => { closeModal(); resolve(); };
+    });
+  }
+
+  function infoModal(title, html, pill="INFO"){
+    return new Promise(resolve => {
+      openModal(`
+        <div class="modalTop"><h3>${escapeHtml(title)}</h3><span class="pill">${escapeHtml(pill)}</span></div>
+        <div class="modalHint">${html}</div>
+        <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
+      `);
+      document.getElementById("mOk").onclick = () => { closeModal(); resolve(); };
+    });
+  }
+
+  /***********************
+   * Plan modal
+   ***********************/
+  function planModal({team, cell, mode, previousPlans}){
+    return new Promise(resolve => {
+      const total = STATE.teams.length;
+      const votesByTeam = {};
+      STATE.teams.forEach(t => votesByTeam[t.id]="yes");
+
+      openModal(`
+        <div class="modalTop">
+          <h3>${mode==="buyNew"?"買地＝寫企劃":"延伸共創＝寫企劃"}｜${escapeHtml(team.name)}＠${escapeHtml(cellLabel(cell.id))}</h3>
+          <span class="pill">PLAN</span>
+        </div>
+
+        <div class="modalHint">
+          ${themeTag(cell.theme)}<br>
+          ✅ 你填的內容會寫入「記錄牆」（只記回答）。<br>
+          ✅ 投票過半通過才會成立（買地/共創）。
+        </div>
+
+        ${mode==="coCreate" ? `
+          <div class="divider"></div>
+          <div class="modalHint"><b>既有企劃（前人回答）</b>：請看完再延伸。</div>
+          ${plansHtml(previousPlans)}
+          <div class="divider"></div>
+        ` : `<div class="divider"></div>`}
+
+        <div class="grid2">
+          <div>
+            <span class="label">企劃名稱</span>
+            <input id="pName" placeholder="例：世界文化夜市 / 人權桌遊工作坊..." />
+          </div>
+          <div>
+            <span class="label">一句亮點</span>
+            <input id="pSlogan" placeholder="例：把世界帶進天下，把天下推向世界。" />
+          </div>
+        </div>
+
+        <span class="label">WHO（對象）</span>
+        <textarea id="pWHO"></textarea>
+
+        <span class="label">WHAT（形式與內容）</span>
+        <textarea id="pWHAT"></textarea>
+
+        <span class="label">HOW（流程與資源）</span>
+        <textarea id="pHOW"></textarea>
+
+        <span class="label">WHY（核心對齊）</span>
+        <textarea id="pWHY"></textarea>
+
+        <span class="label">他們說了什麼（發言紀錄）</span>
+        <textarea id="pSaid"></textarea>
+
+        <div class="divider"></div>
+        <div class="modalHint"><b>投票（過半通過）</b>：每隊選 YES/NO。</div>
+        <div class="row" id="voteRow" style="margin-top:8px; align-items:flex-start;"></div>
+
+        <div class="modalFooter">
+          <button class="btn ok" id="mSubmit">送出並結算</button>
+        </div>
+      `);
+
+      const voteRow = document.getElementById("voteRow");
+      STATE.teams.forEach(t => {
+        const wrap = document.createElement("div");
+        wrap.style.display="flex";
+        wrap.style.gap="8px";
+        wrap.style.flexWrap="wrap";
+        wrap.style.margin="0 10px 10px 0";
+
+        const yes = document.createElement("button");
+        yes.className = "btn ok";
+        yes.textContent = `${t.name}：YES`;
+
+        const no = document.createElement("button");
+        no.className = "btn";
+        no.textContent = `${t.name}：NO`;
+
+        yes.onclick = () => { votesByTeam[t.id]="yes"; yes.className="btn ok"; no.className="btn"; };
+        no.onclick  = () => { votesByTeam[t.id]="no";  no.className="btn bad"; yes.className="btn"; };
+
+        wrap.appendChild(yes);
+        wrap.appendChild(no);
+        voteRow.appendChild(wrap);
+      });
+
+      document.getElementById("mSubmit").onclick = async () => {
+        const plan = {
+          id: rid("P"),
+          teamId: team.id,
+          cellId: cell.id,
+          cellLabel: cellLabel(cell.id),
+          theme: cell.theme,
+          mode,
+          name: (document.getElementById("pName").value.trim() || `未命名企劃（${cellLabel(cell.id)}）`),
+          slogan: document.getElementById("pSlogan").value.trim(),
+          WHO: document.getElementById("pWHO").value.trim(),
+          WHAT: document.getElementById("pWHAT").value.trim(),
+          HOW: document.getElementById("pHOW").value.trim(),
+          WHY: document.getElementById("pWHY").value.trim(),
+          said: document.getElementById("pSaid").value.trim(),
+          votesByTeam,
+          createdAt: new Date().toISOString()
+        };
+
+        let yesN=0;
+        for(const k in votesByTeam) if(votesByTeam[k]==="yes") yesN++;
+        const passed = yesN > total/2;
+        plan.vote = {yes: yesN, no: total-yesN, total};
+        plan.result = passed ? "PASS" : "FAIL";
+
+        STATE.plans.unshift(plan);
+
+        // ✅ Record wall: plan answers
+        const html = `
+          <div><b>格子：</b>${escapeHtml(plan.cellLabel)} ${themeTag(plan.theme)}</div>
+          <div><b>企劃：</b>${escapeHtml(plan.name)}</div>
+          ${plan.slogan ? `<div><b>亮點：</b>${escapeHtml(plan.slogan)}</div>` : ""}
+          ${plan.WHO ? `<div><b>WHO：</b>${escapeHtml(plan.WHO)}</div>` : ""}
+          ${plan.WHAT ? `<div><b>WHAT：</b>${escapeHtml(plan.WHAT)}</div>` : ""}
+          ${plan.HOW ? `<div><b>HOW：</b>${escapeHtml(plan.HOW)}</div>` : ""}
+          ${plan.WHY ? `<div><b>WHY：</b>${escapeHtml(plan.WHY)}</div>` : ""}
+          ${plan.said ? `<div><b>他們說了什麼：</b>${escapeHtml(plan.said)}</div>` : ""}
+          <div class="divider"></div>
+          <div><b>投票：</b>YES ${yesN}/${total} → ${passed ? "✅ 通過" : "❌ 未通過"}</div>
+        `;
+        pushRecord("企劃卡", `${team.name}｜${passed ? "通過" : "未通過"}`, html, {planId: plan.id});
+
+        // ownership update if passed
+        if(passed){
+          if(mode==="buyNew"){
+            STATE.ownership[String(cell.id)] = {
+              ownerTeamId: team.id,
+              coOwnerTeamId: null,
+              buildings: 1,
+              planIds: [plan.id]
+            };
+          }else if(mode==="coCreate"){
+            const own = STATE.ownership[String(cell.id)];
+            if(own){
+              if(!own.coOwnerTeamId) own.coOwnerTeamId = team.id;
+              own.buildings = Math.min(STATE.rules.maxBuildings, Math.max(own.buildings || 1, 2));
+              own.planIds = own.planIds || [];
+              own.planIds.push(plan.id);
+            }
+          }
+        }
+
+        saveState();
+        closeModal();
+
+        if(passed){
+          await infoModal("企劃處理完成", `✅ 通過。回答已寫入記錄牆。`);
+        }else{
+          await infoModal("企劃未通過", "❌ 未通過：不會取得土地 / 不會共創升級，但回答已寫入記錄牆。");
+        }
+
+        resolve();
+      };
+    });
+  }
+
+  /***********************
+   * Landing logic
+   ***********************/
+  async function handleLanding(team){
+    const c = cellById(team.position);
+
+    if(c.type === "start"){
+      await infoModal("起點", `${escapeHtml(team.name)} 維運費已在經過時自動扣除（$${STATE.rules.passStartCost}）。<br><span class="muted">（起點不寫入記錄牆）</span>`);
+      return;
+    }
+
+    if(c.type === "chance" || c.type === "fate"){
+      const card = drawCard(c.type);
+      if(!card){
+        await infoModal("卡牌庫為空", `目前 ${c.type==="chance"?"機會":"命運"} 卡牌庫是空的，請在右側新增卡牌。`);
+        return;
+      }
+      openModal(`
+        <div class="modalTop">
+          <h3>${c.type==="chance"?"機會卡":"命運卡"}</h3><span class="pill">CARD</span>
+        </div>
+        <div class="modalHint">
+          <div style="padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.16);">
+            <div class="row" style="justify-content:space-between;">
+              <span>${escapeHtml(card.text)}</span>
+              <span class="tag">${card.money>=0?"+":""}${card.money}</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;"><b>目前現金：</b>$${team.money}</div>
+          <div class="muted">（抽卡結果不寫入記錄牆）</div>
+        </div>
+        <div class="modalFooter">
+          <button class="btn ok" id="mApply">套用並結束回合</button>
+        </div>
+      `);
+      await new Promise(resolve => {
+        document.getElementById("mApply").onclick = () => {
+          team.money += card.money;
+          clampMoney(team);
+          saveState();
+          closeModal();
+          resolve();
+        };
+      });
+      return;
+    }
+
+    if(c.type === "jail"){
+      openModal(`
+        <div class="modalTop">
+          <h3>監獄｜${escapeHtml(team.name)}</h3><span class="pill">JAIL</span>
+        </div>
+        <div class="modalHint">
+          你必須選擇：<b>花 $${STATE.rules.bailCost} 保釋</b> 或 <b>下一回合跳過</b>。<br>
+          <span class="muted">（監獄處理不寫入記錄牆）</span>
+        </div>
+        <div class="modalFooter">
+          <button class="btn bad" id="mSkip">下一回合跳過</button>
+          <button class="btn ok" id="mBail">花 $${STATE.rules.bailCost} 保釋</button>
+        </div>
+      `);
+
+      await new Promise(resolve => {
+        document.getElementById("mSkip").onclick = () => {
+          STATE.jail[team.id] = {skip: 1};
+          saveState();
+          closeModal();
+          resolve();
+        };
+        document.getElementById("mBail").onclick = () => {
+          team.money -= STATE.rules.bailCost;
+          clampMoney(team);
+          STATE.jail[team.id] = {skip: 0};
+          saveState();
+          closeModal();
+          resolve();
+        };
+      });
+      return;
+    }
+
+    // CORE
+    if(c.type === "core"){
+      const own = STATE.ownership[String(c.id)];
+
+      // empty land
+      if(!own){
+        openModal(`
+          <div class="modalTop"><h3>空地｜${escapeHtml(cellLabel(c.id))}</h3><span class="pill">CORE</span></div>
+          <div class="modalHint">
+            ${themeTag(c.theme)}<br>
+            你必須選擇：<b>只是經過</b> 或 <b>寫企劃卡買地（投票過半通過才擁有）</b>。
+          </div>
+          <div class="modalFooter">
+            <button class="btn" id="mPass">只是經過</button>
+            <button class="btn ok" id="mWrite">寫企劃買地</button>
+          </div>
+        `);
+
+        const choice = await new Promise(resolve => {
+          document.getElementById("mPass").onclick = () => { closeModal(); resolve("pass"); };
+          document.getElementById("mWrite").onclick = () => { closeModal(); resolve("write"); };
+        });
+
+        if(choice==="write"){
+          await planModal({team, cell:c, mode:"buyNew", previousPlans: []});
+        }
+        return;
+      }
+
+      // own or co-own
+      if(own.ownerTeamId===team.id || own.coOwnerTeamId===team.id){
+        await infoModal("自己的土地", `${escapeHtml(team.name)} 踩到自己（或共創）土地：<b>${escapeHtml(cellLabel(c.id))}</b>。<br><span class="muted">（不寫入記錄牆）</span>`);
+        return;
+      }
+
+      // other land
+      const ownerTeam = STATE.teams.find(t => t.id===own.ownerTeamId);
+      const buildings = own.buildings || 1;
+      const rent = STATE.rules.rentPerBuilding * buildings;
+
+      openModal(`
+        <div class="modalTop"><h3>踩到他人地｜${escapeHtml(cellLabel(c.id))}</h3><span class="pill">CORE</span></div>
+        <div class="modalHint">
+          ${themeTag(c.theme)}<br>
+          地主：<b>${escapeHtml(ownerTeam?.name || "?")}</b>｜棟數：<b>${buildings}</b>｜租金：<b>$${rent}</b><br>
+          你必須選擇：<b>付租金</b> 或 <b>延伸寫企劃</b>。<br>
+          <span class="muted">只要你選「延伸寫企劃」，租金會立刻先付（反悔也付）。</span>
+        </div>
+        <div class="modalFooter">
+          <button class="btn warn" id="mRent">付租金 $${rent}</button>
+          <button class="btn ok" id="mCoCreate">延伸寫企劃（先付租金）</button>
+        </div>
+      `);
+
+      const choice = await new Promise(resolve => {
+        document.getElementById("mRent").onclick = () => { closeModal(); resolve("rent"); };
+        document.getElementById("mCoCreate").onclick = () => { closeModal(); resolve("cocreate"); };
+      });
+
+      if(choice==="rent"){
+        payRent(team, ownerTeam, buildings);
+        await infoModal("租金結算完成", `${escapeHtml(team.name)} 支付 $${rent} 給 ${escapeHtml(ownerTeam?.name||"地主")}。<br><span class="muted">（租金不寫入記錄牆）</span>`);
+        return;
+      }
+
+      // cocreate: pay first, then must submit plan
+      payRent(team, ownerTeam, buildings);
+      await infoModal("已先支付租金", `已支付 $${rent} 給 ${escapeHtml(ownerTeam?.name||"地主")}。現在必須完成延伸企劃填寫。<br><span class="muted">（租金不寫入記錄牆）</span>`);
+      const prev = getPlansForCell(c.id);
+      await planModal({team, cell:c, mode:"coCreate", previousPlans: prev});
+      return;
+    }
+
+    await infoModal("未知格子", "此格型態未定義。");
+  }
+
+  /***********************
+   * Play
+   ***********************/
+  async function playRoll(){
+    if(STATE.finished) return;
+    const team = getActiveTeam();
+    if(!team){
+      await infoModal("尚未有隊伍", "請先在右側新增隊伍，再開始擲骰。");
+      return;
+    }
+
+    const skipped = autoSkipIfJailed();
+    if(skipped) return;
+
+    const d = rollDice();
+    moveTeam(team, d);
+    saveState();
+    render();
+
+    await showDiceModal(team, d, cellLabel(team.position));
+    await handleLanding(team);
+
+    nextTeam();
+  }
+
+  /***********************
+   * Finish
+   ***********************/
+  function finishAndSettle(){
+    if(STATE.finished) return;
+    STATE.finished = true;
+
+    const {landValue, buildingBonus} = STATE.rules;
+
+    const passesByTeam = {};
+    STATE.plans.forEach(p => {
+      if(p.result==="PASS"){
+        passesByTeam[p.teamId] = (passesByTeam[p.teamId] || 0) + 1;
+      }
+    });
+
+    const rows = STATE.teams.map(t => {
+      let ownedCells=0;
+      let buildings=0;
+      for(const k of Object.keys(STATE.ownership)){
+        const o = STATE.ownership[k];
+        const isMine = (o.ownerTeamId===t.id || o.coOwnerTeamId===t.id);
+        if(isMine){
+          ownedCells++;
+          buildings += (o.buildings || 1);
+        }
+      }
+      const asset = t.money + ownedCells*landValue + buildings*buildingBonus;
+      return {
+        teamId:t.id,
+        name:t.name,
+        money:t.money,
+        ownedCells,
+        buildings,
+        passPlans: passesByTeam[t.id] || 0,
+        asset
+      };
+    }).sort((a,b)=>b.asset-a.asset);
+
+    const html = `
+      <div class="muted"><b>結算規則：</b>資產 = 現金 +（地產格數 × ${landValue}）+（棟數 × ${buildingBonus}）</div>
+      <div class="divider"></div>
+      ${rows.map((r,i)=>`
+        <div style="padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.16);margin-top:8px;">
+          <div style="font-weight:990;">#${i+1} ${escapeHtml(r.name)}｜資產 <b>$${r.asset}</b></div>
+          <div class="muted">現金 $${r.money}｜地產 ${r.ownedCells} 格｜棟數 ${r.buildings}｜通過企劃 ${r.passPlans} 張</div>
+        </div>
+      `).join("")}
+    `;
+
+    pushRecord("結算", "🏁 最終結算", html, {ranking: rows});
+    saveState();
+    render();
+
+    openModal(`
+      <div class="modalTop"><h3>🏁 已結束並結算</h3><span class="pill">FINISH</span></div>
+      <div class="modalHint">結算摘要已寫入記錄牆。你可以按左上角「匯出 Excel」把所有回答帶走。</div>
+      <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
+    `);
+    document.getElementById("mOk").onclick = () => closeModal();
+  }
+
+  /***********************
+   * Export Excel (xlsx) with fallback CSV
+   ***********************/
+  function exportExcel(){
+    const teamsSheet = STATE.teams.map(t => ({
+      隊伍ID: t.id,
+      隊伍名稱: t.name,
+      成員: t.members || "",
+      現金: t.money,
+      位置: cellLabel(t.position),
+      地產格數: ownedCount(t.id),
+      監獄跳過: STATE.jail[t.id]?.skip ? 1 : 0
+    }));
+
+    const plansSheet = STATE.plans.map(p => ({
+      企劃ID: p.id,
+      隊伍: (STATE.teams.find(t => t.id===p.teamId)?.name) || "",
+      格子: p.cellLabel,
+      主題: p.theme,
+      模式: p.mode==="buyNew" ? "買地" : "延伸共創",
+      企劃名稱: p.name,
+      亮點: p.slogan || "",
+      WHO: p.WHO || "",
+      WHAT: p.WHAT || "",
+      HOW: p.HOW || "",
+      WHY: p.WHY || "",
+      他們說了什麼: p.said || "",
+      投票YES: p.vote?.yes ?? "",
+      投票NO: p.vote?.no ?? "",
+      投票總數: p.vote?.total ?? "",
+      結果: p.result==="PASS" ? "通過" : "未通過",
+      建立時間: p.createdAt || ""
+    }));
+
+    const ownershipSheet = Object.keys(STATE.ownership).map(k => {
+      const o = STATE.ownership[k];
+      const owner = STATE.teams.find(t => t.id===o.ownerTeamId)?.name || "";
+      const co = o.coOwnerTeamId ? (STATE.teams.find(t => t.id===o.coOwnerTeamId)?.name || "") : "";
+      const plans = (o.planIds || [])
+        .map(pid => STATE.plans.find(p => p.id===pid)?.name)
+        .filter(Boolean)
+        .join("｜");
+      return {
+        格子ID: Number(k),
+        格子名稱: cellLabel(Number(k)),
+        地主: owner,
+        共創: co,
+        棟數: o.buildings || 1,
+        企劃清單: plans
+      };
+    });
+
+    const recordsSheet = STATE.records.map(r => ({
+      時間: r.t,
+      類型: r.type,
+      標題: r.title,
+      內容: stripHtmlToText(r.html)
+    }));
+
+    const cardsSheet = [
+      ...STATE.cards.chance.map(c => ({類型:"機會", 金額:c.money, 內容:c.text})),
+      ...STATE.cards.fate.map(c => ({類型:"命運", 金額:c.money, 內容:c.text})),
+    ];
+
+    if(typeof XLSX !== "undefined"){
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(teamsSheet), "隊伍");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(plansSheet), "企劃卡");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ownershipSheet), "地產狀態");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recordsSheet), "記錄牆");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cardsSheet), "卡牌庫");
+
+      const filename = `天下桌遊_匯出_${new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+      return;
+    }
+
+    // fallback CSV
+    const rows = [["時間","類型","標題","內容"]];
+    recordsSheet.forEach(r => rows.push([r.時間,r.類型,r.標題,r.內容]));
+    const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `天下桌遊_記錄牆_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /***********************
+   * Reset
+   ***********************/
+  function resetGame(){
+    openModal(`
+      <div class="modalTop"><h3>重置本局</h3><span class="pill">RESET</span></div>
+      <div class="modalHint">
+        <b>保留卡牌庫</b>：清空隊伍/地產/企劃/記錄，但保留自訂卡牌。<br>
+        <b>全部清空</b>：回到初始狀態（含卡牌庫）。
+      </div>
+      <div class="modalFooter">
+        <button class="btn warn" id="mKeep">重置（保留卡牌庫）</button>
+        <button class="btn bad" id="mAll">全部清空</button>
+      </div>
+    `);
+
+    document.getElementById("mKeep").onclick = () => {
+      const keepCards = STATE.cards;
+      STATE = defaultState();
+      STATE.cards = keepCards;
+      saveState();
+      closeModal();
+      render();
+    };
+    document.getElementById("mAll").onclick = () => {
+      STATE = defaultState();
+      saveState();
+      closeModal();
+      render();
+    };
+  }
+
+  /***********************
+   * Events
+   ***********************/
+  document.getElementById("btnRoll").addEventListener("click", playRoll);
+  document.getElementById("btnFinish").addEventListener("click", finishAndSettle);
+  document.getElementById("btnReset").addEventListener("click", resetGame);
+  document.getElementById("btnExportXlsx").addEventListener("click", exportExcel);
+
+  document.getElementById("btnAddTeam").addEventListener("click", addTeam);
+  document.getElementById("teamMoney").value = String(STATE.rules.startMoney);
+
+  document.getElementById("btnAddCard").addEventListener("click", addCard);
+  document.getElementById("btnExportCards").addEventListener("click", exportCardsJson);
+  document.getElementById("btnImportCards").addEventListener("click", () => {
+    document.getElementById("cardsFile").click();
+  });
+  document.getElementById("cardsFile").addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if(file) importCardsJsonFromFile(file);
+    e.target.value = "";
+  });
+
+  // Teams click
+  elTeamsList.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const act = btn.getAttribute("data-act");
+    if(act==="setActive"){
+      const idx = parseInt(btn.getAttribute("data-idx"), 10);
+      if(Number.isFinite(idx)){
+        STATE.activeTeamIndex = Math.max(0, Math.min(idx, STATE.teams.length-1));
+        saveState(); render();
+      }
+    }
+    if(act==="removeTeam"){
+      const id = btn.getAttribute("data-id");
+      removeTeam(id);
+    }
+  });
+
+  // Cards click
+  elCardsList.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    const act = btn.getAttribute("data-act");
+    if(act==="delCard"){
+      deleteCard(btn.getAttribute("data-type"), btn.getAttribute("data-id"));
+    }
+  });
+
+  // Active team dropdown
+  elSelActiveTeam.addEventListener("change", () => {
+    const idx = parseInt(elSelActiveTeam.value, 10);
+    if(Number.isFinite(idx)){
+      STATE.activeTeamIndex = Math.max(0, Math.min(idx, STATE.teams.length-1));
+      saveState(); render();
+    }
+  });
+
+  /***********************
+   * Bootstrap
+   ***********************/
+  render();
+
+})();
+</script>
+</body>
+</html>
