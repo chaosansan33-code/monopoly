@@ -45,9 +45,14 @@
       display:grid;
       grid-template-columns: 1.55fr 1fr;
       gap:14px;
-      height:100dvh;          /* ✅ 橫向更穩 */
+      height:100vh;
+      min-height:0;          /* 🔥 加這行 */
       padding:14px;
-      overflow:hidden;        /* ✅ 讓滾動只發生在 panel 內 */
+    }
+
+    /* ✅ Grid 子元素預設 min-height:auto 會害內部 overflow 失效 */
+    .app > .panel{
+      min-height:0;
     }
 
     .panel{
@@ -58,8 +63,7 @@
       overflow:hidden;
       display:flex;
       flex-direction:column;
-      min-height:0;           /* ✅ 允許子元素 overflow 生效 */
-      backdrop-filter: blur(10px);
+      min-height:0;
     }
 
     header{
@@ -166,10 +170,13 @@
 
     /* RIGHT（像左邊一樣：header 固定、內容區可滾動拉動） */
     .rightContent{
-      flex:1 1 auto;     /* 佔滿 header 以外空間 */
-      min-height:0;      /* ⚠️ 這行非常重要，沒有會無法正常滾動 */
-      overflow-y:auto;   /* 只讓右側內容垂直滾動 */
-      overflow-x:hidden; /* 防止水平亂跑 */
+      flex:1 1 auto;
+      min-height:0;
+
+      overflow-y:auto;              /* ✅ 右側內容可下拉 */
+      overflow-x:hidden;
+      -webkit-overflow-scrolling:touch; /* ✅ iOS/觸控更像左邊那種滑 */
+
       padding:12px;
       display:flex;
       flex-direction:column;
