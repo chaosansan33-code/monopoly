@@ -362,9 +362,14 @@
     }
 
     @media (max-width: 980px){
-      .app{ grid-template-columns:1fr; height:auto; overflow:visible; }
-      .panel{ min-height: 540px; }
-      .rightContent{ max-height:none; }
+      body{ overflow:auto; }                 /* ✅ 小螢幕：整頁允許往下滑 */
+      .app{
+        grid-template-columns:1fr;
+        height:auto;
+        overflow:visible;
+        min-height: auto;                    /* ✅ 不要卡住高度 */
+      }
+      .panel{ min-height: auto; }            /* ✅ 不要強迫 540px */
     }
   </style>
 </head>
