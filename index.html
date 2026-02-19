@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>天下書院｜線上共識大富翁（單機完整版）</title>
+  <title>天下書院｜共識大富翁</title>
 
   <!-- Excel 匯出（xlsx）。若載不到會自動 fallback CSV -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
@@ -164,17 +164,17 @@
       z-index:2;
     }
 
-    /* RIGHT (整個右側可滾) */
+    /* RIGHT（像左邊一樣：header 固定、內容區可滾動拉動） */
     .rightContent{
-      flex:1 1 auto;
-      min-height:0;
-      overflow:auto;      /* ✅ 右側整體可滾 */
+      flex:1 1 auto;     /* 佔滿 header 以外空間 */
+      min-height:0;      /* ⚠️ 這行非常重要，沒有會無法正常滾動 */
+      overflow-y:auto;   /* 只讓右側內容垂直滾動 */
+      overflow-x:hidden; /* 防止水平亂跑 */
       padding:12px;
       display:flex;
       flex-direction:column;
       gap:12px;
     }
-
     details{
       border:1px solid rgba(255,255,255,.10);
       border-radius:18px;
@@ -344,7 +344,7 @@
     <section class="panel">
       <header>
         <div>
-          <h1>天下書院｜線上共識大富翁</h1>
+          <h1>天下書院｜共識大富翁</h1>
           <div class="sub" id="statusLine">—</div>
         </div>
         <div class="row">
@@ -408,7 +408,7 @@
               </div>
               <div>
                 <span class="label">成員（可不填）</span>
-                <input id="teamMembers" placeholder="例：姍姍、品然" />
+                <input id="teamMembers" placeholder="例：小明、小美" />
               </div>
             </div>
 
@@ -439,7 +439,7 @@
             <div class="row">
               <button class="btn" id="btnExportCards">匯出卡牌庫 JSON（下載）</button>
               <button class="btn" id="btnImportCards">匯入卡牌庫 JSON（覆蓋）</button>
-              <button class="btn ok" id="btnMergeCards">合併匯入（追加）</button>
+              <button class="btn ok" id="btnMergeCards">合併匯入</button>
               <input type="file" id="cardsFile" accept="application/json" style="display:none;">
             </div>
 
