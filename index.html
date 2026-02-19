@@ -29,6 +29,10 @@
       --sans: system-ui, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
     }
     *{box-sizing:border-box}
+    html, body{
+      height:100%;
+    }
+
     body{
       margin:0;
       font-family:var(--sans);
@@ -38,15 +42,16 @@
         radial-gradient(900px 700px at 85% 25%, rgba(96,165,250,.14), transparent 60%),
         radial-gradient(1100px 800px at 50% 110%, rgba(34,197,94,.12), transparent 60%),
         linear-gradient(180deg, #070b14 0%, #050811 100%);
-      min-height:100dvh;
+      overflow:hidden;      /* ✅ 關鍵：整頁不要滾 */
     }
-
     .app{
       display:grid;
       grid-template-columns: 1.55fr 1fr;
       gap:14px;
-      height:100vh;
-      min-height:0;          /* 🔥 加這行 */
+
+      height:100dvh;        /* ✅ 比 100vh 更準，橫向平板也穩 */
+      min-height:0;         /* ✅ 讓 grid 子項目允許變矮，內部才能滾 */
+
       padding:14px;
     }
 
@@ -60,10 +65,11 @@
       border: 1px solid var(--line);
       border-radius: var(--r);
       box-shadow: var(--shadow);
-      overflow:hidden;
-      display:flex;
+      overflow:hidden;          /* ✅ 不讓內容溢出破版 */
+
+      display:flex;             /* ✅ 關鍵：讓 header + content 垂直排列 */
       flex-direction:column;
-      min-height:0;
+      min-height:0;             /* ✅ 關鍵：允許內容區縮起來 → 才能滾 */
     }
 
     header{
@@ -170,12 +176,12 @@
 
     /* RIGHT（像左邊一樣：header 固定、內容區可滾動拉動） */
     .rightContent{
-      flex:1 1 auto;
-      min-height:0;
+      flex:1 1 auto;            /* ✅ 佔滿 header 以外的高度 */
+      min-height:0;             /* ✅ 關鍵：讓 overflow 生效 */
 
-      overflow-y:auto;              /* ✅ 右側內容可下拉 */
+      overflow-y:auto;          /* ✅ 右側可下拉 */
       overflow-x:hidden;
-      -webkit-overflow-scrolling:touch; /* ✅ iOS/觸控更像左邊那種滑 */
+      -webkit-overflow-scrolling:touch;
 
       padding:12px;
       display:flex;
