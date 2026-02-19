@@ -71,7 +71,26 @@
       flex-direction:column;
       min-height:0;             /* ✅ 關鍵：允許內容區縮起來 → 才能滾 */
     }
+    /* ✅ FIX：右側改成「整個 panel 自己滾」，header 用 sticky 固定 */
+    .panel.panelRight{
+      overflow-y: auto;          /* 右側整塊可滾 */
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
 
+    /* header 固定在右側滾動容器頂端 */
+    .panel.panelRight > header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    /* 右側內容不要再自己做 overflow（交給 panelRight 滾） */
+    .panel.panelRight .rightContent{
+      overflow: visible;
+      flex: 0 0 auto;
+      min-height: auto;
+    }
     header{
       flex:0 0 auto;
       padding:12px 14px;
