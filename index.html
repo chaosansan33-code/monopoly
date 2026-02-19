@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>天下書院｜線上共識大富翁（質感版）</title>
+  <title>天下書院｜線上共識大富翁（單機非常完整版）</title>
 
-  <!-- Excel 匯出（xlsx）。若離線載不到，程式會自動 fallback CSV -->
+  <!-- Excel 匯出（xlsx） -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
 
   <style>
@@ -26,7 +26,6 @@
       --ok:#22c55e;
       --warn:#f59e0b;
       --bad:#ef4444;
-      --ink:#0b1020;
 
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: system-ui, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -44,12 +43,14 @@
       min-height:100vh;
     }
 
+    /* Layout: use dynamic viewport height to behave in mobile landscape */
     .app{
       display:grid;
       grid-template-columns: 1.55fr 1fr;
       gap:14px;
-      height:100vh;
+      height: 100dvh;
       padding:14px;
+      overflow:hidden;
     }
 
     .panel{
@@ -87,7 +88,6 @@
       border-radius:999px;
       white-space:nowrap;
     }
-
     .btn{
       border:1px solid var(--line);
       background: rgba(255,255,255,.06);
@@ -109,6 +109,7 @@
     .btn.warn{ border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.16); }
     .btn.bad{ border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.16); }
     .btn.pink{ border-color: rgba(255,107,155,.35); background: rgba(255,107,155,.16); }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
 
     .content{
       padding:12px;
@@ -119,7 +120,6 @@
       flex-direction:column;
       gap:12px;
     }
-
     .card{
       background: rgba(15, 24, 45, .68);
       border:1px solid rgba(255,255,255,.10);
@@ -127,9 +127,31 @@
       padding:12px;
       box-shadow: 0 10px 28px rgba(0,0,0,.25);
     }
-    .card h2{ margin:0 0 8px 0; font-size:14px; letter-spacing:.2px; }
+    .cardTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:8px;
+    }
+    .card h2{ margin:0; font-size:14px; letter-spacing:.2px; display:flex; align-items:center; gap:8px; }
     .muted{ color:var(--muted); font-size:12px; line-height:1.5; }
     .divider{ height:1px; background:var(--line); margin:10px 0; }
+
+    /* info icon */
+    .infoBtn{
+      width:22px;height:22px;
+      display:inline-grid;place-items:center;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color:var(--text);
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+    }
+    .infoBtn:hover{ background: rgba(255,255,255,.10); }
 
     /* Map */
     .mapWrap{
@@ -157,7 +179,7 @@
     }
     .cellDot{
       position:absolute;
-      width: 10px; height: 10px;
+      width: 9px; height: 9px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,.22);
       background: rgba(255,255,255,.10);
@@ -165,7 +187,7 @@
       pointer-events:none;
     }
 
-    /* RIGHT (不要再切斷內容) */
+    /* RIGHT */
     .rightContent{
       flex:1 1 auto;
       min-height:0;
@@ -175,7 +197,6 @@
       flex-direction:column;
       gap:12px;
     }
-
     details{
       border:1px solid rgba(255,255,255,.10);
       border-radius:18px;
@@ -197,6 +218,17 @@
     details .inner{
       padding:12px;
       border-top:1px solid var(--line);
+      min-height:0;
+    }
+
+    /* Make long lists scroll inside to avoid "can't reach bottom" */
+    .innerScroll{
+      max-height: 42dvh;
+      overflow:auto;
+      padding-right:6px;
+    }
+    @media (max-width: 980px){
+      .innerScroll{ max-height: 36dvh; }
     }
 
     .grid2{
@@ -215,7 +247,7 @@
       font-family:var(--sans);
       outline:none;
     }
-    textarea{ min-height: 92px; resize:vertical; }
+    textarea{ min-height: 96px; resize:vertical; }
     .label{ font-size:12px; color:var(--muted); margin: 8px 0 6px; display:block; }
 
     .teamItem{
@@ -229,7 +261,7 @@
       align-items:center;
       margin-bottom:8px;
     }
-    .teamName{ font-weight:950; display:flex; gap:10px; align-items:center; }
+    .teamName{ font-weight:950; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .mini{ font-size:12px; color:var(--muted); margin-top:3px; line-height:1.35; }
     .tag{
       font-size:11px;
@@ -241,7 +273,7 @@
       white-space:nowrap;
     }
 
-    /* records (每筆可展開全文) */
+    /* records (each expandable) */
     .recordDetails{
       border:1px solid rgba(255,255,255,.10);
       border-radius:14px;
@@ -266,7 +298,7 @@
       white-space:pre-wrap;
     }
 
-    /* cards list (每張可展開全文) */
+    /* cards list (each expandable) */
     .cardDetails{
       border:1px solid rgba(255,255,255,.10);
       border-radius:14px;
@@ -290,7 +322,7 @@
       white-space:pre-wrap;
     }
 
-    /* modal (強制決策：沒有 close / 不能點背景) */
+    /* modal (no close / no background click) */
     .modalBg{
       position:fixed;
       inset:0;
@@ -302,8 +334,8 @@
       z-index:999;
     }
     .modal{
-      width:min(980px, 100%);
-      max-height: 92vh;
+      width:min(1000px, 100%);
+      max-height: 92dvh;
       overflow:auto;
       background: rgba(15, 24, 45, .96);
       border:1px solid rgba(255,255,255,.14);
@@ -318,6 +350,7 @@
       gap:10px;
       align-items:center;
       padding:6px 6px 10px;
+      flex-wrap:wrap;
     }
     .modalTop h3{ margin:0; font-size:16px; }
     .modalHero{
@@ -354,7 +387,7 @@
     }
 
     @media (max-width: 980px){
-      .app{ grid-template-columns:1fr; height:auto; }
+      .app{ grid-template-columns:1fr; height:auto; overflow:visible; }
       .panel{ min-height: 540px; }
     }
   </style>
@@ -367,7 +400,7 @@
     <section class="panel">
       <header>
         <div>
-          <h1>天下書院｜線上共識大富翁（質感版）</h1>
+          <h1>天下書院｜線上共識大富翁（單機非常完整版）</h1>
           <div class="sub" id="statusLine">—</div>
         </div>
         <div class="row">
@@ -378,31 +411,36 @@
 
       <div class="content">
         <div class="card">
-          <h2>回合控制</h2>
+          <div class="cardTop">
+            <h2>
+              回合控制
+              <button class="infoBtn" id="iTurn" title="A 方案：擲骰→完成事件→自動換下一隊">ⓘ</button>
+            </h2>
+            <span class="pill" id="turnPill">—</span>
+          </div>
+
           <div class="row" style="justify-content:space-between;">
             <div class="row">
               <span class="tag">目前隊伍</span>
               <select id="selActiveTeam" style="min-width:260px;"></select>
-              <span class="tag" id="turnInfo">—</span>
             </div>
             <div class="row">
               <button class="btn ok" id="btnRoll">🎲 擲骰子</button>
               <button class="btn bad" id="btnFinish">🏁 結束並結算</button>
             </div>
           </div>
-          <div class="muted" style="margin-top:8px;">
-            ✅ 強制決策：沒有「關閉 / 取消 / X」，也不能點背景關閉。<br>
-            ✅ 必須完成事件（經過/付租/抽卡套用/監獄決策/送出企劃）才會換到下一隊。
-          </div>
         </div>
 
         <div class="card">
-          <h2>地圖（map.png）</h2>
-          <div class="muted" style="margin-bottom:8px;">
-            把你的地圖圖片放在同一資料夾，命名為 <b>map.png</b>（或改下面 img 的 src）。
+          <div class="cardTop">
+            <h2>
+              地圖
+              <button class="infoBtn" id="iMap" title="把 map.png 放在與 index.html 同一層（GitHub Pages 會讀 ./map.png）">ⓘ</button>
+            </h2>
+            <span class="pill">map.png</span>
           </div>
           <div class="mapWrap" id="mapWrap">
-            <img id="mapImg" src="map.png" alt="Board Map" />
+            <img id="mapImg" src="./map.png" alt="Board Map" />
           </div>
         </div>
       </div>
@@ -413,7 +451,7 @@
       <header>
         <div>
           <h1>主持面板</h1>
-          <div class="sub">隊伍/卡牌/記錄都會儲存在此裝置（localStorage）</div>
+          <div class="sub">單機版：資料儲存在此裝置（localStorage）</div>
         </div>
       </header>
 
@@ -422,7 +460,10 @@
         <!-- Teams -->
         <details open>
           <summary>
-            <span>隊伍列表（可收合）</span>
+            <span style="display:flex;align-items:center;gap:8px;">
+              隊伍列表
+              <button class="infoBtn" id="iTeams" title="起始金預設 1000，可在新增隊伍時改；也可在規則設定調整預設值。">ⓘ</button>
+            </span>
             <span class="pill" id="teamsCountPill">—</span>
           </summary>
           <div class="inner">
@@ -436,9 +477,10 @@
                 <input id="teamMembers" placeholder="例：姍姍、品然" />
               </div>
             </div>
+
             <div class="grid2" style="margin-top:6px;">
               <div>
-                <span class="label">起始現金</span>
+                <span class="label">起始現金（預設 1000）</span>
                 <input id="teamMoney" type="number" />
               </div>
               <div>
@@ -448,30 +490,59 @@
             </div>
 
             <div class="divider"></div>
-            <div id="teamsList"></div>
+
+            <div class="innerScroll" id="teamsList"></div>
+
+            <div class="divider"></div>
+
+            <details>
+              <summary>
+                <span style="display:flex;align-items:center;gap:8px;">
+                  規則設定（可改）
+                  <button class="infoBtn" id="iRules" title="修改後會儲存在此裝置並立即生效。">ⓘ</button>
+                </span>
+                <span class="pill">rules</span>
+              </summary>
+              <div class="inner">
+                <div class="grid2">
+                  <div>
+                    <span class="label">預設起始金（新增隊伍用）</span>
+                    <input id="rStartMoney" type="number" />
+                  </div>
+                  <div>
+                    <span class="label">經過起點扣款</span>
+                    <input id="rPassStart" type="number" />
+                  </div>
+                </div>
+                <div class="grid2" style="margin-top:6px;">
+                  <div>
+                    <span class="label">每棟租金（租金 = 每棟 × 總棟數）</span>
+                    <input id="rRentPerBuilding" type="number" />
+                  </div>
+                  <div>
+                    <span class="label">保釋費</span>
+                    <input id="rBail" type="number" />
+                  </div>
+                </div>
+                <div style="margin-top:10px;">
+                  <button class="btn ok" id="btnSaveRules" style="width:100%;">保存規則</button>
+                </div>
+              </div>
+            </details>
+
           </div>
         </details>
 
         <!-- Cards -->
         <details open>
           <summary>
-            <span>機會 / 命運卡牌庫（可收合）</span>
+            <span style="display:flex;align-items:center;gap:8px;">
+              機會 / 命運卡牌庫
+              <button class="infoBtn" id="iCards" title="機會/命運不綁正負；金額可正可負。匯入可覆蓋或合併。">ⓘ</button>
+            </span>
             <span class="pill" id="cardsCountPill">—</span>
           </summary>
           <div class="inner">
-            <div class="muted">
-              ✅ 機會/命運不綁正負；金額可正可負。<br>
-              ✅ 跨裝置：匯出 JSON → 在另一台匯入 JSON。
-            </div>
-            <div class="divider"></div>
-
-            <div class="row">
-              <button class="btn" id="btnExportCards">匯出卡牌庫 JSON</button>
-              <button class="btn" id="btnImportCards">匯入卡牌庫 JSON</button>
-              <input type="file" id="cardsFile" accept="application/json" style="display:none;">
-            </div>
-
-            <div class="divider"></div>
 
             <div class="grid2">
               <div>
@@ -487,24 +558,45 @@
               </div>
             </div>
             <span class="label">卡牌內容</span>
-            <input id="newCardText" placeholder="例：臨時得到國外單位資源｜省下一筆成本" />
+            <input id="newCardText" placeholder="例：臨時獲得國外單位資源｜省下一筆成本" />
             <button class="btn ok" id="btnAddCard" style="width:100%;">新增卡牌</button>
 
             <div class="divider"></div>
-            <div id="cardsList"></div>
+
+            <div class="card" style="padding:10px;">
+              <div class="cardTop" style="margin-bottom:6px;">
+                <h2 style="font-size:13px;margin:0;display:flex;align-items:center;gap:8px;">
+                  JSON 文字框
+                  <button class="infoBtn" id="iJson" title="匯出會把 JSON 填到這裡；匯入會讀這裡。">ⓘ</button>
+                </h2>
+                <span class="pill">copy/paste</span>
+              </div>
+              <textarea id="cardsJsonBox" spellcheck="false" style="font-family:var(--mono);min-height:140px;"></textarea>
+              <div class="row" style="margin-top:8px;justify-content:flex-end;">
+                <button class="btn" id="btnExportCardsToBox">匯出到文字框</button>
+                <button class="btn" id="btnDownloadCards">下載 JSON</button>
+                <button class="btn warn" id="btnImportCardsReplace">匯入覆蓋</button>
+                <button class="btn ok" id="btnImportCardsMerge">合併匯入</button>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="innerScroll" id="cardsList"></div>
           </div>
         </details>
 
         <!-- Records -->
         <details open>
           <summary>
-            <span>回答紀錄牆（只記回答，可收合）</span>
+            <span style="display:flex;align-items:center;gap:8px;">
+              回答紀錄牆
+              <button class="infoBtn" id="iRecords" title="只記：企劃卡回答 / 結算（含破產）。不記操作、不記抽卡。">ⓘ</button>
+            </span>
             <span class="pill" id="recordsCountPill">—</span>
           </summary>
           <div class="inner">
-            <div class="muted">只記：企劃卡回答 / 最後結算摘要（不記操作log、不記抽卡結果）。</div>
-            <div class="divider"></div>
-            <div id="recordsList"></div>
+            <div class="innerScroll" id="recordsList"></div>
           </div>
         </details>
 
@@ -521,7 +613,7 @@
 <script>
 (() => {
   /***********************
-   * Board config
+   * Board config (22 cells)
    ***********************/
   const CELLS = [
     {id:1,  type:"start",  theme:"—",       name:"起點（經過扣 $200）"},
@@ -548,30 +640,30 @@
     {id:22, type:"core",   theme:"全球視野", name:"自由③"},
   ];
 
-  // tokens on map (you can tweak x/y later to perfectly match your image)
+  /* Hotspots (percentage) — tweak to perfectly align with your map */
   const HOTSPOTS = [
-    {id:1,  x: 8,  y: 12},
-    {id:2,  x: 18, y: 12},
-    {id:3,  x: 28, y: 12},
-    {id:4,  x: 38, y: 12},
-    {id:5,  x: 48, y: 12},
-    {id:6,  x: 58, y: 12},
-    {id:7,  x: 68, y: 12},
-    {id:8,  x: 78, y: 12},
-    {id:9,  x: 88, y: 25},
-    {id:10, x: 88, y: 36},
-    {id:11, x: 88, y: 47},
-    {id:12, x: 88, y: 58},
-    {id:13, x: 88, y: 69},
-    {id:14, x: 75, y: 86},
-    {id:15, x: 62, y: 86},
-    {id:16, x: 49, y: 86},
-    {id:17, x: 36, y: 86},
-    {id:18, x: 23, y: 86},
-    {id:19, x: 10, y: 86},
-    {id:20, x: 8,  y: 72},
-    {id:21, x: 8,  y: 54},
-    {id:22, x: 8,  y: 32},
+    {id:1,  x: 10, y: 12},
+    {id:2,  x: 22, y: 12},
+    {id:3,  x: 34, y: 12},
+    {id:4,  x: 46, y: 12},
+    {id:5,  x: 58, y: 12},
+    {id:6,  x: 70, y: 12},
+    {id:7,  x: 82, y: 12},
+    {id:8,  x: 92, y: 16},
+    {id:9,  x: 92, y: 30},
+    {id:10, x: 92, y: 42},
+    {id:11, x: 92, y: 54},
+    {id:12, x: 92, y: 66},
+    {id:13, x: 84, y: 86},
+    {id:14, x: 70, y: 86},
+    {id:15, x: 56, y: 86},
+    {id:16, x: 42, y: 86},
+    {id:17, x: 28, y: 86},
+    {id:18, x: 14, y: 86},
+    {id:19, x: 8,  y: 74},
+    {id:20, x: 8,  y: 58},
+    {id:21, x: 8,  y: 42},
+    {id:22, x: 8,  y: 26},
   ];
 
   /***********************
@@ -618,13 +710,13 @@
   /***********************
    * State
    ***********************/
-  const LS_KEY = "nthu_gp_consensus_monopoly_vB_luxe_20260211";
+  const LS_KEY = "nthu_gp_consensus_monopoly_ultra_local_20260219";
 
   function rid(prefix){ return prefix + Math.random().toString(16).slice(2,10); }
+  function pad2(n){ return String(n).padStart(2,"0"); }
   function nowStr(){
     const d=new Date();
-    const p=n=>String(n).padStart(2,"0");
-    return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
   }
   function escapeHtml(s){
     return String(s)
@@ -633,31 +725,31 @@
       .replaceAll(">","&gt;");
   }
 
-  const defaultState = () => ({
-    version: 120,
-    rules: {
-      startMoney: 2000,
-      passStartCost: 200,
-      bailCost: 100,
-      rentPerBuilding: 200,
-      landValue: 300,        // settlement
-      buildingBonus: 50,     // settlement
-      maxBuildings: 2
-    },
-    activeTeamIndex: 0,
-    teams: [],
-    ownership: {
-      // cellId: { ownerTeamId, coOwnerTeamId, buildings, planIds: [] }
-    },
-    plans: [],
-    records: [], // only answers: plan + finish
-    jail: {}, // teamId: { skip: 0/1 }
-    cards: {
-      chance: ORIGINAL_CARDS.chance.map(c => ({id: rid("C"), ...c})),
-      fate: ORIGINAL_CARDS.fate.map(c => ({id: rid("F"), ...c})),
-    },
-    finished: false
-  });
+  function defaultState(){
+    return {
+      version: 301,
+      finished: false,
+      rules:{
+        startMoney: 1000,
+        passStartCost: 200,
+        rentPerBuilding: 200,
+        bailCost: 100,
+        maxBuildingsPerCell: 6, // safety cap
+      },
+      activeTeamIndex: 0,
+      teams: [],
+      jail: {}, // teamId: { skip: 0/1 }
+      // ownership[cellId] = { buildings:[{teamId}], planIds:[...] }
+      ownership: {},
+      plans: [],
+      // only answers: plans + finish/bankrupt
+      records: [],
+      cards: {
+        chance: ORIGINAL_CARDS.chance.map(c => ({id: rid("C"), ...c})),
+        fate: ORIGINAL_CARDS.fate.map(c => ({id: rid("F"), ...c})),
+      }
+    };
+  }
 
   let STATE = loadState();
 
@@ -666,24 +758,29 @@
       const raw = localStorage.getItem(LS_KEY);
       if(!raw) return defaultState();
       const s = JSON.parse(raw);
-      if(!s || s.version !== 120) return defaultState();
+      if(!s || s.version !== 301) return defaultState();
+
+      // harden
+      if(!s.rules) s.rules = defaultState().rules;
+      if(!Array.isArray(s.teams)) s.teams=[];
+      if(!s.ownership) s.ownership={};
+      if(!Array.isArray(s.plans)) s.plans=[];
+      if(!Array.isArray(s.records)) s.records=[];
+      if(!s.jail) s.jail={};
       if(!s.cards?.chance || !s.cards?.fate){
-        s.cards = {
-          chance: ORIGINAL_CARDS.chance.map(c => ({id: rid("C"), ...c})),
-          fate: ORIGINAL_CARDS.fate.map(c => ({id: rid("F"), ...c})),
-        };
+        s.cards = defaultState().cards;
       }
-      if(!Array.isArray(s.records)) s.records = [];
-      if(!Array.isArray(s.plans)) s.plans = [];
-      if(!s.ownership) s.ownership = {};
-      if(!s.jail) s.jail = {};
-      if(typeof s.finished !== "boolean") s.finished = false;
+      if(typeof s.finished !== "boolean") s.finished=false;
+
       return s;
     }catch(e){
       return defaultState();
     }
   }
-  function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }
+
+  function saveState(){
+    localStorage.setItem(LS_KEY, JSON.stringify(STATE));
+  }
 
   function cellById(id){ return CELLS.find(c=>c.id===id); }
   function cellLabel(id){
@@ -692,13 +789,33 @@
     return c.theme !== "—" ? `${c.theme}－${c.name}` : c.name;
   }
   function getActiveTeam(){ return STATE.teams[STATE.activeTeamIndex] || null; }
-  function clampMoney(team){ if(team.money < 0) team.money = 0; }
 
-  function ownedCount(teamId){
+  function isBankrupt(team){ return team.money < 0; }
+
+  function clampBuildings(cellId){
+    const own = STATE.ownership[String(cellId)];
+    if(!own) return;
+    const cap = Math.max(1, Number(STATE.rules.maxBuildingsPerCell||6));
+    if(Array.isArray(own.buildings) && own.buildings.length > cap){
+      own.buildings = own.buildings.slice(0, cap);
+    }
+  }
+
+  function ownedCellsCount(teamId){
     let n=0;
     for(const k of Object.keys(STATE.ownership)){
-      const o = STATE.ownership[k];
-      if(o.ownerTeamId===teamId || o.coOwnerTeamId===teamId) n++;
+      const own = STATE.ownership[k];
+      const has = (own.buildings||[]).some(b=>b.teamId===teamId);
+      if(has) n++;
+    }
+    return n;
+  }
+
+  function ownedBuildingsCount(teamId){
+    let n=0;
+    for(const k of Object.keys(STATE.ownership)){
+      const own = STATE.ownership[k];
+      n += (own.buildings||[]).filter(b=>b.teamId===teamId).length;
     }
     return n;
   }
@@ -707,24 +824,21 @@
    * DOM
    ***********************/
   const elStatusLine = document.getElementById("statusLine");
+  const elTurnPill = document.getElementById("turnPill");
+
   const elTeamsCountPill = document.getElementById("teamsCountPill");
   const elCardsCountPill = document.getElementById("cardsCountPill");
   const elRecordsCountPill = document.getElementById("recordsCountPill");
 
   const elSelActiveTeam = document.getElementById("selActiveTeam");
-  const elTurnInfo = document.getElementById("turnInfo");
-
   const elTeamsList = document.getElementById("teamsList");
   const elCardsList = document.getElementById("cardsList");
   const elRecordsList = document.getElementById("recordsList");
-
   const elMapWrap = document.getElementById("mapWrap");
 
   const modalBg = document.getElementById("modalBg");
   const modal = document.getElementById("modal");
-
-  // 強制決策：不允許點背景關閉
-  modalBg.addEventListener("click", () => { /* do nothing */ });
+  modalBg.addEventListener("click", () => { /* forced decision: do nothing */ });
 
   function openModal(html){
     modal.innerHTML = html;
@@ -737,8 +851,21 @@
     modal.innerHTML = "";
   }
 
+  function stripHtmlToText(html){
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return (tmp.textContent || tmp.innerText || "").trim();
+  }
+
+  function themeTag(theme){
+    if(theme==="台灣文化") return `<span class="tag" style="border-color:rgba(255,107,155,.35);background:rgba(255,107,155,.14)">台灣文化</span>`;
+    if(theme==="國際議題") return `<span class="tag" style="border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.14)">國際議題</span>`;
+    if(theme==="全球視野") return `<span class="tag" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.14)">全球視野</span>`;
+    return `<span class="tag">特殊</span>`;
+  }
+
   /***********************
-   * Records (only answers)
+   * Records: ONLY answers
    ***********************/
   function pushRecord(type, title, html, meta={}){
     STATE.records.unshift({id: rid("R"), t: nowStr(), type, title, html, meta});
@@ -747,7 +874,7 @@
   }
 
   /***********************
-   * Map tokens
+   * Map
    ***********************/
   function buildMap(){
     [...elMapWrap.querySelectorAll(".token")].forEach(n=>n.remove());
@@ -774,33 +901,17 @@
   }
 
   /***********************
-   * Render helpers
-   ***********************/
-  function themeTag(theme){
-    if(theme==="台灣文化") return `<span class="tag" style="border-color:rgba(255,107,155,.35);background:rgba(255,107,155,.14)">台灣文化</span>`;
-    if(theme==="國際議題") return `<span class="tag" style="border-color:rgba(96,165,250,.35);background:rgba(96,165,250,.14)">國際議題</span>`;
-    if(theme==="全球視野") return `<span class="tag" style="border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.14)">全球視野</span>`;
-    return `<span class="tag">特殊</span>`;
-  }
-
-  function stripHtmlToText(html){
-    const tmp = document.createElement("div");
-    tmp.innerHTML = html;
-    return (tmp.textContent || tmp.innerText || "").trim();
-  }
-
-  /***********************
    * Render
    ***********************/
   function render(){
     elStatusLine.textContent =
-      `隊伍 ${STATE.teams.length} 組｜企劃卡 ${STATE.plans.length}｜回答記錄 ${STATE.records.length}｜機會 ${STATE.cards.chance.length}｜命運 ${STATE.cards.fate.length}`;
+      `隊伍 ${STATE.teams.length} 組｜企劃卡 ${STATE.plans.length}｜回答 ${STATE.records.length}｜機會 ${STATE.cards.chance.length}｜命運 ${STATE.cards.fate.length}`;
 
     elTeamsCountPill.textContent = `隊伍 ${STATE.teams.length}`;
     elCardsCountPill.textContent = `機會 ${STATE.cards.chance.length}｜命運 ${STATE.cards.fate.length}`;
     elRecordsCountPill.textContent = `記錄 ${STATE.records.length}`;
 
-    // active select
+    // Active select
     elSelActiveTeam.innerHTML = "";
     STATE.teams.forEach((t, idx) => {
       const opt = document.createElement("option");
@@ -812,16 +923,18 @@
     if(STATE.teams.length > 0){
       elSelActiveTeam.value = String(STATE.activeTeamIndex);
       const t = getActiveTeam();
-      const jail = STATE.jail[t.id];
-      elTurnInfo.textContent = jail?.skip ? `⚠️ ${t.name}（監獄：跳過 1 回合）` : `輪到：${t.name}`;
+      const j = STATE.jail[t.id];
+      elTurnPill.textContent = STATE.finished
+        ? "已結束"
+        : (j?.skip ? `⚠️ ${t.name}（監獄：跳過 1 回合）` : `輪到：${t.name}`);
     }else{
-      elTurnInfo.textContent = "請先新增隊伍";
+      elTurnPill.textContent = "請先新增隊伍";
     }
 
-    // Teams
+    // Teams list
     elTeamsList.innerHTML = "";
     STATE.teams.forEach((t, idx) => {
-      const jail = STATE.jail[t.id];
+      const j = STATE.jail[t.id];
       const active = idx===STATE.activeTeamIndex;
 
       const div = document.createElement("div");
@@ -832,32 +945,29 @@
             <span style="width:10px;height:10px;border-radius:999px;background:${t.color};display:inline-block;"></span>
             ${escapeHtml(t.name)}
             ${active ? `<span class="tag" style="border-color:rgba(255,107,155,.35);background:rgba(255,107,155,.14)">目前</span>` : ""}
-            ${jail?.skip ? `<span class="tag" style="border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.12)">監獄跳過1</span>` : ""}
+            ${j?.skip ? `<span class="tag" style="border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.12)">監獄跳過1</span>` : ""}
           </div>
           <div class="mini">
             成員：${escapeHtml(t.members||"—")}｜現金：$${t.money}<br>
-            位置：${escapeHtml(cellLabel(t.position))}｜地產：${ownedCount(t.id)} 格
+            位置：${escapeHtml(cellLabel(t.position))}｜地產格數：${ownedCellsCount(t.id)}｜棟數：${ownedBuildingsCount(t.id)}
           </div>
         </div>
         <div class="row" style="justify-content:flex-end;">
-          <button class="btn" data-act="setActive" data-idx="${idx}">切換</button>
           <button class="btn bad" data-act="removeTeam" data-id="${t.id}">刪除</button>
         </div>
       `;
       elTeamsList.appendChild(div);
     });
 
-    // Cards (each expandable)
+    // Cards list (expandable)
     elCardsList.innerHTML = "";
-
-    const addCardGroupTitle = (label) => {
+    const addGroupTitle = (label) => {
       const d = document.createElement("div");
       d.className = "tag";
       d.textContent = label;
-      d.style.marginBottom="8px";
+      d.style.marginBottom = "8px";
       elCardsList.appendChild(d);
     };
-
     const addCardDetails = (type, c) => {
       const dd = document.createElement("details");
       dd.className = "cardDetails";
@@ -874,12 +984,12 @@
       elCardsList.appendChild(dd);
     };
 
-    addCardGroupTitle("機會卡（你原本 16 張）");
+    addGroupTitle("機會卡");
     STATE.cards.chance.forEach(c => addCardDetails("chance", c));
-    addCardGroupTitle("命運卡（你原本 15 張）");
+    addGroupTitle("命運卡");
     STATE.cards.fate.forEach(c => addCardDetails("fate", c));
 
-    // Records (each expandable)
+    // Records list
     elRecordsList.innerHTML = "";
     if(STATE.records.length===0){
       const m = document.createElement("div");
@@ -901,6 +1011,16 @@
       });
     }
 
+    // Rules inputs
+    document.getElementById("rStartMoney").value = String(STATE.rules.startMoney);
+    document.getElementById("rPassStart").value = String(STATE.rules.passStartCost);
+    document.getElementById("rRentPerBuilding").value = String(STATE.rules.rentPerBuilding);
+    document.getElementById("rBail").value = String(STATE.rules.bailCost);
+
+    // Buttons disabled if finished
+    document.getElementById("btnRoll").disabled = STATE.finished;
+    document.getElementById("btnFinish").disabled = STATE.finished;
+
     buildMap();
   }
 
@@ -916,7 +1036,7 @@
     const name = document.getElementById("teamName").value.trim() || `第 ${STATE.teams.length+1} 組`;
     const members = document.getElementById("teamMembers").value.trim();
     const money = parseInt(document.getElementById("teamMoney").value, 10);
-    const startMoney = Number.isFinite(money) ? money : STATE.rules.startMoney;
+    const startMoney = Number.isFinite(money) ? money : Number(STATE.rules.startMoney);
 
     const team = {
       id: rid("T"),
@@ -927,6 +1047,8 @@
       color: pickColor(STATE.teams.length)
     };
     STATE.teams.push(team);
+    if(STATE.teams.length===1) STATE.activeTeamIndex = 0;
+
     saveState();
     document.getElementById("teamName").value = "";
     document.getElementById("teamMembers").value = "";
@@ -934,9 +1056,12 @@
   }
 
   function removeTeam(teamId){
+    // remove ownership buildings belonging to that team
     for(const k of Object.keys(STATE.ownership)){
-      const o = STATE.ownership[k];
-      if(o.ownerTeamId===teamId || o.coOwnerTeamId===teamId){
+      const own = STATE.ownership[k];
+      own.buildings = (own.buildings||[]).filter(b => b.teamId !== teamId);
+      // if land becomes empty, delete cell ownership
+      if((own.buildings||[]).length===0){
         delete STATE.ownership[k];
       }
     }
@@ -950,7 +1075,7 @@
   }
 
   /***********************
-   * Cards library import/export
+   * Cards library
    ***********************/
   function addCard(){
     const type = document.getElementById("newCardType").value;
@@ -958,13 +1083,7 @@
     const money = Number(document.getElementById("newCardMoney").value);
 
     if(!text || !Number.isFinite(money)){
-      openModal(`
-        <div class="modalTop"><h3>新增卡牌失敗</h3><span class="pill">INFO</span></div>
-        <div class="modalHint">請填寫卡牌內容與金額（可正可負）。</div>
-        <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
-      `);
-      document.getElementById("mOk").onclick = () => closeModal();
-      return;
+      return infoModal("新增卡牌失敗", "請填寫卡牌內容與金額（可正可負）。","INFO");
     }
     const id = rid(type==="chance"?"C":"F");
     STATE.cards[type].push({id, text, money});
@@ -980,13 +1099,22 @@
     render();
   }
 
-  function exportCardsJson(){
-    const payload = {
+  function exportCardsPayload(){
+    return {
       version: 1,
       exportedAt: new Date().toISOString(),
       chance: STATE.cards.chance.map(c => ({money: c.money, text: c.text})),
-      fate: STATE.cards.fate.map(c => ({money: c.money, text: c.text}))
+      fate: STATE.cards.fate.map(c => ({money: c.money, text: c.text})),
     };
+  }
+
+  function fillCardsBox(){
+    const box = document.getElementById("cardsJsonBox");
+    box.value = JSON.stringify(exportCardsPayload(), null, 2);
+  }
+
+  function downloadCardsJson(){
+    const payload = exportCardsPayload();
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -998,138 +1126,51 @@
     URL.revokeObjectURL(url);
   }
 
-  function importCardsJsonFromFile(file){
-    const reader = new FileReader();
-    reader.onload = () => {
-      try{
-        const data = JSON.parse(reader.result);
-        const chance = Array.isArray(data.chance) ? data.chance : [];
-        const fate = Array.isArray(data.fate) ? data.fate : [];
+  function normalizeImportedCards(data){
+    const chance = Array.isArray(data?.chance) ? data.chance : [];
+    const fate = Array.isArray(data?.fate) ? data.fate : [];
+    const norm = (arr, prefix) =>
+      arr
+        .filter(x => x && typeof x.text === "string" && Number.isFinite(Number(x.money)))
+        .map(x => ({id: rid(prefix), text: String(x.text).trim(), money: Number(x.money)}))
+        .filter(x => x.text.length>0);
+    return { chance: norm(chance,"C"), fate: norm(fate,"F") };
+  }
 
-        STATE.cards.chance = chance
-          .filter(x => typeof x.text === "string" && Number.isFinite(Number(x.money)))
-          .map(x => ({id: rid("C"), text: String(x.text), money: Number(x.money)}));
+  function importCardsFromBox(mode /* replace|merge */){
+    const box = document.getElementById("cardsJsonBox");
+    const raw = box.value.trim();
+    if(!raw){
+      return infoModal("匯入失敗", "文字框是空的。","ERROR");
+    }
+    let data;
+    try{
+      data = JSON.parse(raw);
+    }catch(e){
+      return infoModal("匯入失敗", "JSON 解析失敗：請確認內容是合法 JSON。","ERROR");
+    }
+    const norm = normalizeImportedCards(data);
+    if(norm.chance.length===0 && norm.fate.length===0){
+      return infoModal("匯入失敗", "沒有找到有效卡牌（需要 text 與 money）。","ERROR");
+    }
 
-        STATE.cards.fate = fate
-          .filter(x => typeof x.text === "string" && Number.isFinite(Number(x.money)))
-          .map(x => ({id: rid("F"), text: String(x.text), money: Number(x.money)}));
+    if(mode==="replace"){
+      STATE.cards.chance = norm.chance;
+      STATE.cards.fate = norm.fate;
+    }else{
+      // merge (append)
+      STATE.cards.chance = [...STATE.cards.chance, ...norm.chance];
+      STATE.cards.fate = [...STATE.cards.fate, ...norm.fate];
+    }
 
-        saveState();
-        render();
-
-        openModal(`
-          <div class="modalTop"><h3>匯入成功</h3><span class="pill">INFO</span></div>
-          <div class="modalHint">已匯入：機會 ${STATE.cards.chance.length} 張｜命運 ${STATE.cards.fate.length} 張</div>
-          <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
-        `);
-        document.getElementById("mOk").onclick = () => closeModal();
-      }catch(e){
-        openModal(`
-          <div class="modalTop"><h3>匯入失敗</h3><span class="pill">ERROR</span></div>
-          <div class="modalHint">檔案不是合法的 JSON 或格式不符合。</div>
-          <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
-        `);
-        document.getElementById("mOk").onclick = () => closeModal();
-      }
-    };
-    reader.readAsText(file, "utf-8");
+    saveState();
+    render();
+    return infoModal("匯入成功", `機會 ${STATE.cards.chance.length} 張｜命運 ${STATE.cards.fate.length} 張`,"INFO");
   }
 
   /***********************
-   * Game flow
+   * Modals helpers
    ***********************/
-  function rollDice(){ return Math.floor(Math.random()*6)+1; }
-
-  function moveTeam(team, steps){
-    let pos = team.position;
-    for(let i=0;i<steps;i++){
-      pos++;
-      if(pos>22) pos = 1;
-      if(pos===1){
-        team.money -= STATE.rules.passStartCost;
-        clampMoney(team);
-      }
-    }
-    team.position = pos;
-  }
-
-  function nextTeam(){
-    if(STATE.teams.length===0) return;
-    STATE.activeTeamIndex = (STATE.activeTeamIndex + 1) % STATE.teams.length;
-    saveState();
-    render();
-  }
-
-  function autoSkipIfJailed(){
-    const t = getActiveTeam();
-    if(!t) return false;
-    const j = STATE.jail[t.id];
-    if(j?.skip){
-      STATE.jail[t.id].skip = 0;
-      saveState();
-      render();
-      nextTeam();
-      return true;
-    }
-    return false;
-  }
-
-  function drawCard(type){
-    const arr = type==="chance" ? STATE.cards.chance : STATE.cards.fate;
-    if(!arr.length) return null;
-    return arr[Math.floor(Math.random()*arr.length)];
-  }
-
-  function getPlansForCell(cellId){
-    const own = STATE.ownership[String(cellId)];
-    const ids = own?.planIds || [];
-    return ids.map(pid => STATE.plans.find(p => p.id===pid)).filter(Boolean);
-  }
-
-  function plansHtml(plans){
-    if(!plans.length) return `<div class="muted">（此格尚無既有企劃卡）</div>`;
-    return plans.map((p,i) => `
-      <div style="padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.16);margin-top:8px;">
-        <div style="font-weight:950;">既有企劃 #${i+1}｜${escapeHtml(p.name)}</div>
-        ${p.slogan ? `<div><b>亮點：</b>${escapeHtml(p.slogan)}</div>` : ""}
-        ${p.WHO ? `<div><b>WHO：</b>${escapeHtml(p.WHO)}</div>` : ""}
-        ${p.WHAT ? `<div><b>WHAT：</b>${escapeHtml(p.WHAT)}</div>` : ""}
-        ${p.HOW ? `<div><b>HOW：</b>${escapeHtml(p.HOW)}</div>` : ""}
-        ${p.WHY ? `<div><b>WHY：</b>${escapeHtml(p.WHY)}</div>` : ""}
-        ${p.said ? `<div><b>他們說了什麼：</b>${escapeHtml(p.said)}</div>` : ""}
-        <div class="divider"></div>
-        <div class="muted">投票：YES ${p.vote?.yes ?? "?"}/${p.vote?.total ?? "?"} → ${p.result==="PASS"?"通過":"未通過"}</div>
-      </div>
-    `).join("");
-  }
-
-  function payRent(payerTeam, ownerTeam, buildings){
-    const rent = STATE.rules.rentPerBuilding * (buildings || 1);
-    payerTeam.money -= rent; clampMoney(payerTeam);
-    ownerTeam.money += rent;
-    saveState();
-    render();
-    return rent;
-  }
-
-  /***********************
-   * Modals
-   ***********************/
-  function showDiceModal(team, dice, destLabel){
-    return new Promise(resolve => {
-      openModal(`
-        <div class="modalTop"><h3>擲骰結果</h3><span class="pill">DICE</span></div>
-        <div class="modalHero">
-          <div class="d">🎲 ${dice}</div>
-          <div class="to">${escapeHtml(team.name)} → ${escapeHtml(destLabel)}</div>
-          <div class="modalHint">（此提示不寫入記錄牆）</div>
-        </div>
-        <div class="modalFooter"><button class="btn ok" id="mGo">繼續</button></div>
-      `);
-      document.getElementById("mGo").onclick = () => { closeModal(); resolve(); };
-    });
-  }
-
   function infoModal(title, html, pill="INFO"){
     return new Promise(resolve => {
       openModal(`
@@ -1141,30 +1182,180 @@
     });
   }
 
-  /***********************
-   * Plan modal
-   ***********************/
-  function planModal({team, cell, mode, previousPlans}){
+  function showDiceModal(team, dice, destLabel){
     return new Promise(resolve => {
-      const total = STATE.teams.length;
-      const votesByTeam = {};
-      STATE.teams.forEach(t => votesByTeam[t.id]="yes");
+      openModal(`
+        <div class="modalTop"><h3>擲骰結果</h3><span class="pill">DICE</span></div>
+        <div class="modalHero">
+          <div class="d">🎲 ${dice}</div>
+          <div class="to">${escapeHtml(team.name)} → ${escapeHtml(destLabel)}</div>
+        </div>
+        <div class="modalFooter"><button class="btn ok" id="mGo">繼續</button></div>
+      `);
+      document.getElementById("mGo").onclick = () => { closeModal(); resolve(); };
+    });
+  }
+
+  /***********************
+   * Game helpers
+   ***********************/
+  function rollDice(){ return Math.floor(Math.random()*6)+1; }
+
+  function moveTeam(team, steps){
+    let pos = team.position;
+    for(let i=0;i<steps;i++){
+      pos++;
+      if(pos>22) pos = 1;
+      if(pos===1){
+        team.money -= Number(STATE.rules.passStartCost||200);
+        // (money can go <0 — handled after landing)
+      }
+    }
+    team.position = pos;
+  }
+
+  function nextTeam(){
+    if(STATE.teams.length===0) return;
+    STATE.activeTeamIndex = (STATE.activeTeamIndex + 1) % STATE.teams.length;
+  }
+
+  function autoSkipIfJailed(){
+    const t = getActiveTeam();
+    if(!t) return false;
+    const j = STATE.jail[t.id];
+    if(j?.skip){
+      STATE.jail[t.id].skip = 0;
+      nextTeam();
+      saveState();
+      render();
+      return true;
+    }
+    return false;
+  }
+
+  function drawCard(type){
+    const arr = type==="chance" ? STATE.cards.chance : STATE.cards.fate;
+    if(!arr.length) return null;
+    return arr[Math.floor(Math.random()*arr.length)];
+  }
+
+  function ensureOwnership(cellId){
+    const key = String(cellId);
+    if(!STATE.ownership[key]){
+      STATE.ownership[key] = { buildings: [], planIds: [] };
+    }
+    if(!Array.isArray(STATE.ownership[key].buildings)) STATE.ownership[key].buildings=[];
+    if(!Array.isArray(STATE.ownership[key].planIds)) STATE.ownership[key].planIds=[];
+    clampBuildings(cellId);
+    return STATE.ownership[key];
+  }
+
+  function getPlansForCell(cellId){
+    const own = STATE.ownership[String(cellId)];
+    const ids = own?.planIds || [];
+    return ids.map(pid => STATE.plans.find(p => p.id===pid)).filter(Boolean);
+  }
+
+  function plansHtml(plans){
+    if(!plans.length) return `<div class="muted">（此格尚無既有企劃卡）</div>`;
+    return plans.map((p,i) => `
+      <details class="recordDetails" style="margin-top:8px;">
+        <summary>
+          <span>既有企劃 #${i+1}｜${escapeHtml(p.name)}</span>
+          <span class="tag">${p.result==="PASS"?"通過":"未通過"}</span>
+        </summary>
+        <div class="body">
+${p.slogan ? `亮點：${p.slogan}\n` : ""}${p.WHO ? `WHO：${p.WHO}\n` : ""}${p.WHAT ? `WHAT：${p.WHAT}\n` : ""}${p.HOW ? `HOW：${p.HOW}\n` : ""}${p.WHY ? `WHY：${p.WHY}\n` : ""}${p.said ? `他們說了什麼：${p.said}\n` : ""}投票：YES ${p.vote?.yes ?? "?"}/${p.vote?.total ?? "?"}
+        </div>
+      </details>
+    `).join("");
+  }
+
+  function rentDistribution(buildings){
+    // returns map teamId -> amount
+    const per = Number(STATE.rules.rentPerBuilding||200);
+    const dist = {};
+    for(const b of buildings){
+      dist[b.teamId] = (dist[b.teamId] || 0) + per;
+    }
+    return dist;
+  }
+
+  function applyRentPayment(payerTeam, cellId){
+    const own = STATE.ownership[String(cellId)];
+    const buildings = own?.buildings || [];
+    if(buildings.length===0) return {total:0, dist:{}};
+
+    const dist = rentDistribution(buildings);
+    const total = Object.values(dist).reduce((a,b)=>a+b,0);
+
+    payerTeam.money -= total;
+
+    for(const teamId of Object.keys(dist)){
+      const receiver = STATE.teams.find(t=>t.id===teamId);
+      if(receiver) receiver.money += dist[teamId];
+    }
+
+    return {total, dist};
+  }
+
+  function distToText(dist){
+    const parts = [];
+    for(const teamId of Object.keys(dist)){
+      const name = STATE.teams.find(t=>t.id===teamId)?.name || teamId;
+      parts.push(`${name} +$${dist[teamId]}`);
+    }
+    return parts.join("｜");
+  }
+
+  function maybeBankruptAndEnd(){
+    // If ANY team money < 0, end immediately.
+    const loser = STATE.teams.find(t => t.money < 0);
+    if(!loser) return false;
+    endByBankruptcy(loser);
+    return true;
+  }
+
+  /***********************
+   * Voting & Plan modal
+   ***********************/
+  function voteInitAllYes(){
+    const votes = {};
+    STATE.teams.forEach(t => votes[t.id] = "yes");
+    return votes;
+  }
+
+  function calcVote(votesByTeam){
+    const total = STATE.teams.length;
+    let yes = 0;
+    for(const k in votesByTeam) if(votesByTeam[k]==="yes") yes++;
+    const passed = yes > total/2;
+    return {yes, no: total-yes, total, passed};
+  }
+
+  function planModal({team, cell, mode, previousPlans}){
+    // mode: "buyNew" | "coCreateOther" | "upgradeOwn"
+    return new Promise(resolve => {
+      const votesByTeam = voteInitAllYes();
+
+      const modeLabel =
+        mode==="buyNew" ? "買地＝寫企劃" :
+        mode==="coCreateOther" ? "延伸共創＝寫企劃" :
+        "加蓋＝寫企劃";
 
       openModal(`
         <div class="modalTop">
-          <h3>${mode==="buyNew"?"買地＝寫企劃":"延伸共創＝寫企劃"}｜${escapeHtml(team.name)}＠${escapeHtml(cellLabel(cell.id))}</h3>
+          <h3>${escapeHtml(modeLabel)}｜${escapeHtml(team.name)}＠${escapeHtml(cellLabel(cell.id))}</h3>
           <span class="pill">PLAN</span>
         </div>
 
         <div class="modalHint">
-          ${themeTag(cell.theme)}<br>
-          ✅ 你填的內容會寫入「記錄牆」（只記回答）。<br>
-          ✅ 投票過半通過才會成立（買地/共創）。
+          ${themeTag(cell.theme)}
         </div>
 
-        ${mode==="coCreate" ? `
+        ${(mode==="coCreateOther" || mode==="upgradeOwn") ? `
           <div class="divider"></div>
-          <div class="modalHint"><b>既有企劃（前人回答）</b>：請看完再延伸。</div>
+          <div class="modalHint"><b>既有企劃（前人回答）</b></div>
           ${plansHtml(previousPlans)}
           <div class="divider"></div>
         ` : `<div class="divider"></div>`}
@@ -1192,7 +1383,7 @@
         <span class="label">WHY（核心對齊）</span>
         <textarea id="pWHY"></textarea>
 
-        <span class="label">他們說了什麼（發言紀錄）</span>
+        <span class="label">他們說了什麼（發言）</span>
         <textarea id="pSaid"></textarea>
 
         <div class="divider"></div>
@@ -1200,7 +1391,7 @@
         <div class="row" id="voteRow" style="margin-top:8px; align-items:flex-start;"></div>
 
         <div class="modalFooter">
-          <button class="btn ok" id="mSubmit">送出並結算</button>
+          <button class="btn ok" id="mSubmit">送出</button>
         </div>
       `);
 
@@ -1229,6 +1420,8 @@
       });
 
       document.getElementById("mSubmit").onclick = async () => {
+        const v = calcVote(votesByTeam);
+
         const plan = {
           id: rid("P"),
           teamId: team.id,
@@ -1244,18 +1437,14 @@
           WHY: document.getElementById("pWHY").value.trim(),
           said: document.getElementById("pSaid").value.trim(),
           votesByTeam,
+          vote: {yes: v.yes, no: v.no, total: v.total},
+          result: v.passed ? "PASS" : "FAIL",
           createdAt: new Date().toISOString()
         };
 
-        let yesN=0;
-        for(const k in votesByTeam) if(votesByTeam[k]==="yes") yesN++;
-        const passed = yesN > total/2;
-        plan.vote = {yes: yesN, no: total-yesN, total};
-        plan.result = passed ? "PASS" : "FAIL";
-
         STATE.plans.unshift(plan);
 
-        // ✅ Record wall: plan answers
+        // record (answers only)
         const html = `
           <div><b>格子：</b>${escapeHtml(plan.cellLabel)} ${themeTag(plan.theme)}</div>
           <div><b>企劃：</b>${escapeHtml(plan.name)}</div>
@@ -1266,40 +1455,24 @@
           ${plan.WHY ? `<div><b>WHY：</b>${escapeHtml(plan.WHY)}</div>` : ""}
           ${plan.said ? `<div><b>他們說了什麼：</b>${escapeHtml(plan.said)}</div>` : ""}
           <div class="divider"></div>
-          <div><b>投票：</b>YES ${yesN}/${total} → ${passed ? "✅ 通過" : "❌ 未通過"}</div>
+          <div><b>投票：</b>YES ${v.yes}/${v.total} → ${v.passed ? "✅ 通過" : "❌ 未通過"}</div>
         `;
-        pushRecord("企劃卡", `${team.name}｜${passed ? "通過" : "未通過"}`, html, {planId: plan.id});
+        pushRecord("企劃卡", `${team.name}｜${v.passed ? "通過" : "未通過"}`, html, {planId: plan.id});
 
-        // ownership update if passed
-        if(passed){
-          if(mode==="buyNew"){
-            STATE.ownership[String(cell.id)] = {
-              ownerTeamId: team.id,
-              coOwnerTeamId: null,
-              buildings: 1,
-              planIds: [plan.id]
-            };
-          }else if(mode==="coCreate"){
-            const own = STATE.ownership[String(cell.id)];
-            if(own){
-              if(!own.coOwnerTeamId) own.coOwnerTeamId = team.id;
-              own.buildings = Math.min(STATE.rules.maxBuildings, Math.max(own.buildings || 1, 2));
-              own.planIds = own.planIds || [];
-              own.planIds.push(plan.id);
-            }
-          }
+        // ownership update only if passed
+        if(v.passed){
+          const own = ensureOwnership(cell.id);
+          own.planIds.push(plan.id);
+          own.buildings.push({teamId: team.id});
+          clampBuildings(cell.id);
+        }else{
+          // still keep plan linked to cell's planIds? -> only store in plans list + record
+          // (do not attach to land ownership)
         }
 
         saveState();
         closeModal();
-
-        if(passed){
-          await infoModal("企劃處理完成", `✅ 通過。回答已寫入記錄牆。`);
-        }else{
-          await infoModal("企劃未通過", "❌ 未通過：不會取得土地 / 不會共創升級，但回答已寫入記錄牆。");
-        }
-
-        resolve();
+        resolve({passed: v.passed, planId: plan.id});
       };
     });
   }
@@ -1310,15 +1483,15 @@
   async function handleLanding(team){
     const c = cellById(team.position);
 
+    // If pass start already made team <0, we still continue until bankruptcy check after event; but start itself has no decision.
     if(c.type === "start"){
-      await infoModal("起點", `${escapeHtml(team.name)} 維運費已在經過時自動扣除（$${STATE.rules.passStartCost}）。<br><span class="muted">（起點不寫入記錄牆）</span>`);
       return;
     }
 
     if(c.type === "chance" || c.type === "fate"){
       const card = drawCard(c.type);
       if(!card){
-        await infoModal("卡牌庫為空", `目前 ${c.type==="chance"?"機會":"命運"} 卡牌庫是空的，請在右側新增卡牌。`);
+        await infoModal("卡牌庫為空", `目前 ${c.type==="chance"?"機會":"命運"} 卡牌庫是空的。`, "ERROR");
         return;
       }
       openModal(`
@@ -1333,16 +1506,14 @@
             </div>
           </div>
           <div style="margin-top:10px;"><b>目前現金：</b>$${team.money}</div>
-          <div class="muted">（抽卡結果不寫入記錄牆）</div>
         </div>
         <div class="modalFooter">
-          <button class="btn ok" id="mApply">套用並結束回合</button>
+          <button class="btn ok" id="mApply">套用</button>
         </div>
       `);
       await new Promise(resolve => {
         document.getElementById("mApply").onclick = () => {
           team.money += card.money;
-          clampMoney(team);
           saveState();
           closeModal();
           resolve();
@@ -1357,15 +1528,13 @@
           <h3>監獄｜${escapeHtml(team.name)}</h3><span class="pill">JAIL</span>
         </div>
         <div class="modalHint">
-          你必須選擇：<b>花 $${STATE.rules.bailCost} 保釋</b> 或 <b>下一回合跳過</b>。<br>
-          <span class="muted">（監獄處理不寫入記錄牆）</span>
+          你必須選擇：<b>花 $${Number(STATE.rules.bailCost||100)} 保釋</b> 或 <b>下一回合跳過</b>。
         </div>
         <div class="modalFooter">
           <button class="btn bad" id="mSkip">下一回合跳過</button>
-          <button class="btn ok" id="mBail">花 $${STATE.rules.bailCost} 保釋</button>
+          <button class="btn ok" id="mBail">花 $${Number(STATE.rules.bailCost||100)} 保釋</button>
         </div>
       `);
-
       await new Promise(resolve => {
         document.getElementById("mSkip").onclick = () => {
           STATE.jail[team.id] = {skip: 1};
@@ -1374,8 +1543,7 @@
           resolve();
         };
         document.getElementById("mBail").onclick = () => {
-          team.money -= STATE.rules.bailCost;
-          clampMoney(team);
+          team.money -= Number(STATE.rules.bailCost||100);
           STATE.jail[team.id] = {skip: 0};
           saveState();
           closeModal();
@@ -1387,15 +1555,16 @@
 
     // CORE
     if(c.type === "core"){
-      const own = STATE.ownership[String(c.id)];
+      const key = String(c.id);
+      const own = STATE.ownership[key];
 
-      // empty land
-      if(!own){
+      // Empty land
+      if(!own || !Array.isArray(own.buildings) || own.buildings.length===0){
         openModal(`
           <div class="modalTop"><h3>空地｜${escapeHtml(cellLabel(c.id))}</h3><span class="pill">CORE</span></div>
           <div class="modalHint">
-            ${themeTag(c.theme)}<br>
-            你必須選擇：<b>只是經過</b> 或 <b>寫企劃卡買地（投票過半通過才擁有）</b>。
+            ${themeTag(c.theme)}
+            <div style="margin-top:8px;">你必須選擇：<b>只是經過</b> 或 <b>寫企劃買地（過半通過才擁有）</b>。</div>
           </div>
           <div class="modalFooter">
             <button class="btn" id="mPass">只是經過</button>
@@ -1409,33 +1578,66 @@
         });
 
         if(choice==="write"){
-          await planModal({team, cell:c, mode:"buyNew", previousPlans: []});
+          const res = await planModal({team, cell:c, mode:"buyNew", previousPlans: []});
+          // planModal handles ownership if passed
         }
         return;
       }
 
-      // own or co-own
-      if(own.ownerTeamId===team.id || own.coOwnerTeamId===team.id){
-        await infoModal("自己的土地", `${escapeHtml(team.name)} 踩到自己（或共創）土地：<b>${escapeHtml(cellLabel(c.id))}</b>。<br><span class="muted">（不寫入記錄牆）</span>`);
+      // Land exists: decide whether team has buildings here
+      const myCount = (own.buildings||[]).filter(b=>b.teamId===team.id).length;
+      const totalBuildings = (own.buildings||[]).length;
+
+      if(myCount>0){
+        // own / co-own land
+        openModal(`
+          <div class="modalTop"><h3>自己的土地｜${escapeHtml(cellLabel(c.id))}</h3><span class="pill">OWN</span></div>
+          <div class="modalHint">
+            ${themeTag(c.theme)}
+            <div style="margin-top:8px;">
+              目前棟數：你有 <b>${myCount}</b> 棟｜此格總棟數 <b>${totalBuildings}</b>。
+            </div>
+            <div class="muted" style="margin-top:6px;">加蓋需寫企劃＋投票；不通過不扣錢。</div>
+          </div>
+          <div class="modalFooter">
+            <button class="btn" id="mPass">只是經過</button>
+            <button class="btn ok" id="mUpgrade">加蓋（寫企劃＋投票）</button>
+          </div>
+        `);
+
+        const choice = await new Promise(resolve => {
+          document.getElementById("mPass").onclick = () => { closeModal(); resolve("pass"); };
+          document.getElementById("mUpgrade").onclick = () => { closeModal(); resolve("upgrade"); };
+        });
+
+        if(choice==="upgrade"){
+          const prev = getPlansForCell(c.id);
+          const res = await planModal({team, cell:c, mode:"upgradeOwn", previousPlans: prev});
+          // if passed, +1 building already done in planModal
+          // if fail, no effect and no payment (as requested)
+        }
         return;
       }
 
-      // other land
-      const ownerTeam = STATE.teams.find(t => t.id===own.ownerTeamId);
-      const buildings = own.buildings || 1;
-      const rent = STATE.rules.rentPerBuilding * buildings;
+      // Other people's land (myCount==0)
+      const rent = Number(STATE.rules.rentPerBuilding||200) * totalBuildings;
 
       openModal(`
         <div class="modalTop"><h3>踩到他人地｜${escapeHtml(cellLabel(c.id))}</h3><span class="pill">CORE</span></div>
         <div class="modalHint">
-          ${themeTag(c.theme)}<br>
-          地主：<b>${escapeHtml(ownerTeam?.name || "?")}</b>｜棟數：<b>${buildings}</b>｜租金：<b>$${rent}</b><br>
-          你必須選擇：<b>付租金</b> 或 <b>延伸寫企劃</b>。<br>
-          <span class="muted">只要你選「延伸寫企劃」，租金會立刻先付（反悔也付）。</span>
+          ${themeTag(c.theme)}
+          <div style="margin-top:8px;">
+            此格總棟數：<b>${totalBuildings}</b>｜若付租金：<b>$${rent}</b>（按棟數比例分配）
+          </div>
+          <div class="muted" style="margin-top:6px;">
+            你可選：付租金，或延伸共創（寫企劃＋投票）。<br>
+            共創<b>通過</b>：這回合不付租，並新增你的一棟。<br>
+            共創<b>不通過</b>：才需要付租金（按當下棟數付）。
+          </div>
         </div>
         <div class="modalFooter">
-          <button class="btn warn" id="mRent">付租金 $${rent}</button>
-          <button class="btn ok" id="mCoCreate">延伸寫企劃（先付租金）</button>
+          <button class="btn warn" id="mRent">付租金</button>
+          <button class="btn ok" id="mCoCreate">延伸共創（寫企劃＋投票）</button>
         </div>
       `);
 
@@ -1445,20 +1647,30 @@
       });
 
       if(choice==="rent"){
-        payRent(team, ownerTeam, buildings);
-        await infoModal("租金結算完成", `${escapeHtml(team.name)} 支付 $${rent} 給 ${escapeHtml(ownerTeam?.name||"地主")}。<br><span class="muted">（租金不寫入記錄牆）</span>`);
+        const {total, dist} = applyRentPayment(team, c.id);
+        saveState();
+        await infoModal("租金完成", `本次支付 <b>$${total}</b><br>${escapeHtml(distToText(dist))}`,"INFO");
         return;
       }
 
-      // cocreate: pay first, then must submit plan
-      payRent(team, ownerTeam, buildings);
-      await infoModal("已先支付租金", `已支付 $${rent} 給 ${escapeHtml(ownerTeam?.name||"地主")}。現在必須完成延伸企劃填寫。<br><span class="muted">（租金不寫入記錄牆）</span>`);
+      // cocreate
       const prev = getPlansForCell(c.id);
-      await planModal({team, cell:c, mode:"coCreate", previousPlans: prev});
-      return;
+      const res = await planModal({team, cell:c, mode:"coCreateOther", previousPlans: prev});
+      if(res.passed){
+        // passed already added building; no rent
+        saveState();
+        return;
+      }else{
+        // failed: pay rent now (based on existing buildings; still the same because failed didn't add)
+        const {total, dist} = applyRentPayment(team, c.id);
+        saveState();
+        await infoModal("共創未通過 → 改付租金", `本次支付 <b>$${total}</b><br>${escapeHtml(distToText(dist))}`,"WARN");
+        return;
+      }
     }
 
-    await infoModal("未知格子", "此格型態未定義。");
+    // fallback
+    await infoModal("未知格子", "此格型態未定義。","ERROR");
   }
 
   /***********************
@@ -1468,70 +1680,90 @@
     if(STATE.finished) return;
     const team = getActiveTeam();
     if(!team){
-      await infoModal("尚未有隊伍", "請先在右側新增隊伍，再開始擲骰。");
+      await infoModal("尚未有隊伍", "請先在右側新增隊伍，再開始擲骰。","INFO");
       return;
     }
 
-    const skipped = autoSkipIfJailed();
-    if(skipped) return;
+    // Jail skip
+    if(autoSkipIfJailed()) return;
 
     const d = rollDice();
     moveTeam(team, d);
+
     saveState();
     render();
 
     await showDiceModal(team, d, cellLabel(team.position));
     await handleLanding(team);
 
+    // Bankruptcy check (money < 0 ends)
+    saveState();
+    render();
+    if(maybeBankruptAndEnd()) return;
+
+    // Next team
     nextTeam();
+    saveState();
+    render();
   }
 
   /***********************
-   * Finish
+   * Finish / Settlement
    ***********************/
-  function finishAndSettle(){
+  function settlementRows(){
+    // asset (for ranking) = cash + buildings*rentPerBuilding (lightweight, understandable)
+    // You can tweak later; but export includes raw numbers.
+    const per = Number(STATE.rules.rentPerBuilding||200);
+
+    const rows = STATE.teams.map(t => {
+      const cells = ownedCellsCount(t.id);
+      const b = ownedBuildingsCount(t.id);
+      const passPlans = STATE.plans.filter(p=>p.teamId===t.id && p.result==="PASS").length;
+      const asset = t.money + b*per; // simple
+      return {teamId:t.id, name:t.name, money:t.money, ownedCells:cells, buildings:b, passPlans, asset};
+    }).sort((a,b)=>b.asset-a.asset);
+
+    return rows;
+  }
+
+  function endByBankruptcy(loserTeam){
     if(STATE.finished) return;
     STATE.finished = true;
 
-    const {landValue, buildingBonus} = STATE.rules;
-
-    const passesByTeam = {};
-    STATE.plans.forEach(p => {
-      if(p.result==="PASS"){
-        passesByTeam[p.teamId] = (passesByTeam[p.teamId] || 0) + 1;
-      }
-    });
-
-    const rows = STATE.teams.map(t => {
-      let ownedCells=0;
-      let buildings=0;
-      for(const k of Object.keys(STATE.ownership)){
-        const o = STATE.ownership[k];
-        const isMine = (o.ownerTeamId===t.id || o.coOwnerTeamId===t.id);
-        if(isMine){
-          ownedCells++;
-          buildings += (o.buildings || 1);
-        }
-      }
-      const asset = t.money + ownedCells*landValue + buildings*buildingBonus;
-      return {
-        teamId:t.id,
-        name:t.name,
-        money:t.money,
-        ownedCells,
-        buildings,
-        passPlans: passesByTeam[t.id] || 0,
-        asset
-      };
-    }).sort((a,b)=>b.asset-a.asset);
-
+    const rows = settlementRows();
     const html = `
-      <div class="muted"><b>結算規則：</b>資產 = 現金 +（地產格數 × ${landValue}）+（棟數 × ${buildingBonus}）</div>
+      <div><b>破產隊伍：</b>${escapeHtml(loserTeam.name)}（money < 0）</div>
       <div class="divider"></div>
       ${rows.map((r,i)=>`
         <div style="padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.16);margin-top:8px;">
           <div style="font-weight:990;">#${i+1} ${escapeHtml(r.name)}｜資產 <b>$${r.asset}</b></div>
-          <div class="muted">現金 $${r.money}｜地產 ${r.ownedCells} 格｜棟數 ${r.buildings}｜通過企劃 ${r.passPlans} 張</div>
+          <div class="muted">現金 $${r.money}｜地產格數 ${r.ownedCells}｜棟數 ${r.buildings}｜通過企劃 ${r.passPlans}</div>
+        </div>
+      `).join("")}
+    `;
+
+    pushRecord("結算", "💥 破產 → 遊戲結束", html, {ranking: rows, bankrupt: loserTeam.id});
+    saveState();
+    render();
+
+    openModal(`
+      <div class="modalTop"><h3>💥 破產：遊戲結束</h3><span class="pill">BANKRUPT</span></div>
+      <div class="modalHint">已寫入結算到「回答紀錄牆」。你可以匯出 Excel。</div>
+      <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
+    `);
+    document.getElementById("mOk").onclick = () => closeModal();
+  }
+
+  function finishAndSettle(){
+    if(STATE.finished) return;
+    STATE.finished = true;
+
+    const rows = settlementRows();
+    const html = `
+      ${rows.map((r,i)=>`
+        <div style="padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(0,0,0,.16);margin-top:8px;">
+          <div style="font-weight:990;">#${i+1} ${escapeHtml(r.name)}｜資產 <b>$${r.asset}</b></div>
+          <div class="muted">現金 $${r.money}｜地產格數 ${r.ownedCells}｜棟數 ${r.buildings}｜通過企劃 ${r.passPlans}</div>
         </div>
       `).join("")}
     `;
@@ -1542,32 +1774,35 @@
 
     openModal(`
       <div class="modalTop"><h3>🏁 已結束並結算</h3><span class="pill">FINISH</span></div>
-      <div class="modalHint">結算摘要已寫入記錄牆。你可以按左上角「匯出 Excel」把所有回答帶走。</div>
+      <div class="modalHint">結算已寫入「回答紀錄牆」。你可以匯出 Excel。</div>
       <div class="modalFooter"><button class="btn ok" id="mOk">知道了</button></div>
     `);
     document.getElementById("mOk").onclick = () => closeModal();
   }
 
   /***********************
-   * Export Excel (xlsx) with fallback CSV
+   * Export Excel (xlsx) with UTF-8 headers
    ***********************/
   function exportExcel(){
+    // Teams
     const teamsSheet = STATE.teams.map(t => ({
       隊伍ID: t.id,
       隊伍名稱: t.name,
       成員: t.members || "",
       現金: t.money,
       位置: cellLabel(t.position),
-      地產格數: ownedCount(t.id),
+      地產格數: ownedCellsCount(t.id),
+      棟數: ownedBuildingsCount(t.id),
       監獄跳過: STATE.jail[t.id]?.skip ? 1 : 0
     }));
 
+    // Plans
     const plansSheet = STATE.plans.map(p => ({
       企劃ID: p.id,
       隊伍: (STATE.teams.find(t => t.id===p.teamId)?.name) || "",
       格子: p.cellLabel,
       主題: p.theme,
-      模式: p.mode==="buyNew" ? "買地" : "延伸共創",
+      類型: p.mode==="buyNew" ? "買地" : (p.mode==="coCreateOther" ? "延伸共創" : "自己加蓋"),
       企劃名稱: p.name,
       亮點: p.slogan || "",
       WHO: p.WHO || "",
@@ -1582,24 +1817,29 @@
       建立時間: p.createdAt || ""
     }));
 
+    // Ownership
     const ownershipSheet = Object.keys(STATE.ownership).map(k => {
-      const o = STATE.ownership[k];
-      const owner = STATE.teams.find(t => t.id===o.ownerTeamId)?.name || "";
-      const co = o.coOwnerTeamId ? (STATE.teams.find(t => t.id===o.coOwnerTeamId)?.name || "") : "";
-      const plans = (o.planIds || [])
-        .map(pid => STATE.plans.find(p => p.id===pid)?.name)
-        .filter(Boolean)
-        .join("｜");
+      const cellId = Number(k);
+      const own = STATE.ownership[k];
+      const buildings = own.buildings || [];
+      const byTeam = {};
+      buildings.forEach(b => byTeam[b.teamId] = (byTeam[b.teamId]||0)+1);
+
+      const parts = Object.keys(byTeam).map(teamId => {
+        const nm = STATE.teams.find(t=>t.id===teamId)?.name || teamId;
+        return `${nm}×${byTeam[teamId]}`;
+      });
+
       return {
-        格子ID: Number(k),
-        格子名稱: cellLabel(Number(k)),
-        地主: owner,
-        共創: co,
-        棟數: o.buildings || 1,
-        企劃清單: plans
+        格子ID: cellId,
+        格子名稱: cellLabel(cellId),
+        總棟數: buildings.length,
+        棟數分布: parts.join("｜"),
+        企劃數: (own.planIds||[]).length
       };
     });
 
+    // Records
     const recordsSheet = STATE.records.map(r => ({
       時間: r.t,
       類型: r.type,
@@ -1607,6 +1847,7 @@
       內容: stripHtmlToText(r.html)
     }));
 
+    // Cards
     const cardsSheet = [
       ...STATE.cards.chance.map(c => ({類型:"機會", 金額:c.money, 內容:c.text})),
       ...STATE.cards.fate.map(c => ({類型:"命運", 金額:c.money, 內容:c.text})),
@@ -1617,7 +1858,7 @@
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(teamsSheet), "隊伍");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(plansSheet), "企劃卡");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ownershipSheet), "地產狀態");
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recordsSheet), "記錄牆");
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recordsSheet), "回答紀錄牆");
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cardsSheet), "卡牌庫");
 
       const filename = `天下桌遊_匯出_${new Date().toISOString().slice(0,10)}.xlsx`;
@@ -1625,7 +1866,7 @@
       return;
     }
 
-    // fallback CSV
+    // Fallback CSV (records only)
     const rows = [["時間","類型","標題","內容"]];
     recordsSheet.forEach(r => rows.push([r.時間,r.類型,r.標題,r.內容]));
     const csv = rows.map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
@@ -1633,7 +1874,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `天下桌遊_記錄牆_${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = `天下桌遊_回答紀錄_${new Date().toISOString().slice(0,10)}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1647,7 +1888,7 @@
     openModal(`
       <div class="modalTop"><h3>重置本局</h3><span class="pill">RESET</span></div>
       <div class="modalHint">
-        <b>保留卡牌庫</b>：清空隊伍/地產/企劃/記錄，但保留自訂卡牌。<br>
+        <b>保留卡牌庫</b>：清空隊伍/地產/企劃/回答紀錄，但保留目前卡牌庫。<br><br>
         <b>全部清空</b>：回到初始狀態（含卡牌庫）。
       </div>
       <div class="modalFooter">
@@ -1658,8 +1899,10 @@
 
     document.getElementById("mKeep").onclick = () => {
       const keepCards = STATE.cards;
+      const keepRules = STATE.rules;
       STATE = defaultState();
       STATE.cards = keepCards;
+      STATE.rules = keepRules;
       saveState();
       closeModal();
       render();
@@ -1673,6 +1916,27 @@
   }
 
   /***********************
+   * Save rules
+   ***********************/
+  function saveRules(){
+    const startMoney = Number(document.getElementById("rStartMoney").value);
+    const passStart = Number(document.getElementById("rPassStart").value);
+    const rentPerBuilding = Number(document.getElementById("rRentPerBuilding").value);
+    const bail = Number(document.getElementById("rBail").value);
+
+    if(!Number.isFinite(startMoney) || !Number.isFinite(passStart) || !Number.isFinite(rentPerBuilding) || !Number.isFinite(bail)){
+      return infoModal("保存失敗","請確認規則欄位都是數字。","ERROR");
+    }
+    STATE.rules.startMoney = startMoney;
+    STATE.rules.passStartCost = passStart;
+    STATE.rules.rentPerBuilding = rentPerBuilding;
+    STATE.rules.bailCost = bail;
+    saveState();
+    render();
+    return infoModal("已保存規則","規則已更新並儲存。","INFO");
+  }
+
+  /***********************
    * Events
    ***********************/
   document.getElementById("btnRoll").addEventListener("click", playRoll);
@@ -1683,29 +1947,19 @@
   document.getElementById("btnAddTeam").addEventListener("click", addTeam);
   document.getElementById("teamMoney").value = String(STATE.rules.startMoney);
 
+  document.getElementById("btnSaveRules").addEventListener("click", saveRules);
+
   document.getElementById("btnAddCard").addEventListener("click", addCard);
-  document.getElementById("btnExportCards").addEventListener("click", exportCardsJson);
-  document.getElementById("btnImportCards").addEventListener("click", () => {
-    document.getElementById("cardsFile").click();
-  });
-  document.getElementById("cardsFile").addEventListener("change", (e) => {
-    const file = e.target.files?.[0];
-    if(file) importCardsJsonFromFile(file);
-    e.target.value = "";
-  });
+  document.getElementById("btnExportCardsToBox").addEventListener("click", fillCardsBox);
+  document.getElementById("btnDownloadCards").addEventListener("click", downloadCardsJson);
+  document.getElementById("btnImportCardsReplace").addEventListener("click", () => importCardsFromBox("replace"));
+  document.getElementById("btnImportCardsMerge").addEventListener("click", () => importCardsFromBox("merge"));
 
   // Teams click
   elTeamsList.addEventListener("click", (e) => {
     const btn = e.target.closest("button");
     if(!btn) return;
     const act = btn.getAttribute("data-act");
-    if(act==="setActive"){
-      const idx = parseInt(btn.getAttribute("data-idx"), 10);
-      if(Number.isFinite(idx)){
-        STATE.activeTeamIndex = Math.max(0, Math.min(idx, STATE.teams.length-1));
-        saveState(); render();
-      }
-    }
     if(act==="removeTeam"){
       const id = btn.getAttribute("data-id");
       removeTeam(id);
@@ -1722,12 +1976,13 @@
     }
   });
 
-  // Active team dropdown
+  // Active team dropdown (allowed even in A mode for host override)
   elSelActiveTeam.addEventListener("change", () => {
     const idx = parseInt(elSelActiveTeam.value, 10);
     if(Number.isFinite(idx)){
       STATE.activeTeamIndex = Math.max(0, Math.min(idx, STATE.teams.length-1));
-      saveState(); render();
+      saveState();
+      render();
     }
   });
 
@@ -1735,7 +1990,6 @@
    * Bootstrap
    ***********************/
   render();
-
 })();
 </script>
 </body>
